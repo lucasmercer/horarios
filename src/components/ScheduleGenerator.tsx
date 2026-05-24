@@ -522,7 +522,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       });
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: promptData,
       });
 
