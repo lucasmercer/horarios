@@ -74,6 +74,8 @@ interface Subject {
   gradeConstraint?: string;
   suffixConstraint?: string;
   allowedTurmaIds?: string[];
+  workloadFundamental?: number;
+  workloadMedio?: number;
 }
 
 interface Turma {
@@ -415,6 +417,8 @@ export default function ScheduleGenerator() {
   const [newTeacherSchoolWorkloadNoite, setNewTeacherSchoolWorkloadNoite] = useState<string>('');
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newSubjectWorkload, setNewSubjectWorkload] = useState<number>(5);
+  const [newSubjectWorkloadFundamental, setNewSubjectWorkloadFundamental] = useState<number | ''>('');
+  const [newSubjectWorkloadMedio, setNewSubjectWorkloadMedio] = useState<number | ''>('');
   const [newSubjectUseLabComp, setNewSubjectUseLabComp] = useState(false);
   const [newSubjectUseLabTab, setNewSubjectUseLabTab] = useState(false);
   const [newSubjectUseSalaMat, setNewSubjectUseSalaMat] = useState(false);
@@ -1620,13 +1624,22 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       return { workload: 0, classWorkload: 0, labWorkload: 0 };
     }
 
-    const workload = S.customWorkloads?.[TId] ?? S.workload;
+    let defaultWorkload = S.workload;
+    if (isFundamental && S.workloadFundamental !== undefined && S.workloadFundamental > 0) {
+      defaultWorkload = S.workloadFundamental;
+    } else if (isMedio && S.workloadMedio !== undefined && S.workloadMedio > 0) {
+      defaultWorkload = S.workloadMedio;
+    }
+
+    const workload = custom ?? defaultWorkload;
+    
+    // Proportional down-scale for lab workload if workload changed
     let labWorkload = S.labWorkload ?? 0;
     let classWorkload = S.classWorkload ?? 0;
     
-    if (custom !== undefined) {
+    if (workload !== S.workload) {
       if (labWorkload > 0) {
-        if (labWorkload > workload) {
+        if (labWorkload >= workload) {
           labWorkload = workload;
           classWorkload = 0;
         } else {
@@ -2454,6 +2467,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     const subjectData = {
       name: newSubjectName,
       workload: newSubjectWorkload || 1,
+      workloadFundamental: newSubjectWorkloadFundamental === '' ? undefined : newSubjectWorkloadFundamental,
+      workloadMedio: newSubjectWorkloadMedio === '' ? undefined : newSubjectWorkloadMedio,
       useLabComp: newSubjectUseLabComp,
       useLabTab: newSubjectUseLabTab,
       useSalaMat: newSubjectUseSalaMat,
@@ -2483,6 +2498,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     
     setNewSubjectName('');
     setNewSubjectWorkload(2);
+    setNewSubjectWorkloadFundamental('');
+    setNewSubjectWorkloadMedio('');
     setNewSubjectUseLabComp(false);
     setNewSubjectUseLabTab(false);
     setNewSubjectUseSalaMat(false);
@@ -2499,6 +2516,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     setEditingSubjectId(subject.id);
     setNewSubjectName(subject.name);
     setNewSubjectWorkload(subject.workload);
+    setNewSubjectWorkloadFundamental(subject.workloadFundamental ?? '');
+    setNewSubjectWorkloadMedio(subject.workloadMedio ?? '');
     setNewSubjectUseLabComp(subject.useLabComp || false);
     setNewSubjectUseLabTab(subject.useLabTab || false);
     setNewSubjectUseSalaMat(subject.useSalaMat || false);
@@ -7783,15 +7802,22 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {subjects.sort((a,b) => a.name.localeCompare(b.name)).map(s => (
-                        <div key={s.id} className="flex items-center gap-1 p-1 pl-2 bg-slate-50 border border-slate-200 rounded-lg group hover:border-[#657c36] hover:bg-white transition-all">
-                          <span className="text-[10px] font-black text-slate-700 uppercase cursor-default">{s.name} ({s.workload}h)</span>
-                          <div className="flex shrink-0">
-                            <button onClick={() => startEditSubject(s)} className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-[#657c36] cursor-pointer">
-                              <Pencil className="w-3 h-3" />
-                            </button>
-                            <button onClick={() => removeSubject(s.id)} className="p-1 hover:bg-red-100 rounded text-slate-500 hover:text-red-500 cursor-pointer">
-                              <Trash2 className="w-3 h-3" />
-                            </button>
+                        <div key={s.id} className="flex flex-col gap-0.5 p-1.5 px-2 bg-slate-50 border border-slate-200 rounded-lg group hover:border-[#657c36] hover:bg-white transition-all">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-black text-slate-700 uppercase cursor-default">{s.name}</span>
+                            <div className="flex shrink-0">
+                              <button onClick={() => startEditSubject(s)} className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-[#657c36] cursor-pointer">
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                              <button onClick={() => removeSubject(s.id)} className="p-1 hover:bg-red-100 rounded text-slate-500 hover:text-red-500 cursor-pointer">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="text-[8px] font-bold text-slate-400">Padrão: {s.workload}</span>
+                            {s.workloadFundamental && <span className="text-[8px] font-bold text-emerald-600">Fund: {s.workloadFundamental}</span>}
+                            {s.workloadMedio && <span className="text-[8px] font-bold text-blue-600">Médio: {s.workloadMedio}</span>}
                           </div>
                         </div>
                       ))}
@@ -7824,22 +7850,46 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   </div>
                   
                   {/* Carga Horária Padrão */}
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase ml-0.5">Carga Horária Padrão (Semanal):</label>
-                    <div className="flex items-center gap-2">
-                      <input 
-                        type="number" 
-                        min="1"
-                        value={newSubjectWorkload}
-                        onChange={e => {
-                          const val = parseInt(e.target.value) || 1;
-                          setNewSubjectWorkload(val);
-                          setNewSubjectClassWorkload(val);
-                          setNewSubjectLabWorkload(0);
-                        }}
-                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900 focus:outline-none focus:border-slate-900 font-mono"
-                      />
-                      <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap uppercase">Aulas</span>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-slate-400 uppercase ml-0.5">Carga Horária (Aulas por Semana):</label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-bold text-slate-500 uppercase">Padrão Geral</span>
+                        <input 
+                          type="number" 
+                          min="1"
+                          value={newSubjectWorkload}
+                          onChange={e => {
+                            const val = parseInt(e.target.value) || 1;
+                            setNewSubjectWorkload(val);
+                            setNewSubjectClassWorkload(val);
+                            setNewSubjectLabWorkload(0);
+                          }}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900 focus:outline-none focus:border-slate-900 font-mono"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-bold text-emerald-600 uppercase">Ensino Fundamental</span>
+                        <input 
+                          type="number" 
+                          min="1"
+                          placeholder={String(newSubjectWorkload)}
+                          value={newSubjectWorkloadFundamental}
+                          onChange={e => setNewSubjectWorkloadFundamental(e.target.value === '' ? '' : parseInt(e.target.value))}
+                          className="w-full px-3 py-2 bg-emerald-50/30 border border-emerald-200 rounded-xl text-xs font-black text-emerald-900 focus:outline-none focus:border-emerald-500 font-mono"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-bold text-blue-600 uppercase">Ensino Médio</span>
+                        <input 
+                          type="number" 
+                          min="1"
+                          placeholder={String(newSubjectWorkload)}
+                          value={newSubjectWorkloadMedio}
+                          onChange={e => setNewSubjectWorkloadMedio(e.target.value === '' ? '' : parseInt(e.target.value))}
+                          className="w-full px-3 py-2 bg-blue-50/30 border border-blue-200 rounded-xl text-xs font-black text-blue-900 focus:outline-none focus:border-blue-500 font-mono"
+                        />
+                      </div>
                     </div>
                   </div>
 

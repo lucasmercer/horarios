@@ -403,7 +403,7 @@ export default function DashboardLayout() {
           </button>
           
           <div className="pt-1.5 text-center">
-            <span className="text-[7px] font-bold text-slate-500 uppercase tracking-widest pl-0.5">V 1.0.75</span>
+            <span className="text-[7px] font-bold text-slate-800 uppercase tracking-widest pl-0.5">V 1.0.75</span>
           </div>
         </div>
       </aside>

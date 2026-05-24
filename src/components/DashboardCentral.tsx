@@ -281,7 +281,7 @@ export default function DashboardCentral() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Info Cards */}
         <div 
           onClick={() => navigate('/professores')}
@@ -340,6 +340,26 @@ export default function DashboardCentral() {
           <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-emerald-600">
             <TrendingUp className="w-3.5 h-3.5" />
             <span>Matriz curricular base</span>
+          </div>
+        </div>
+
+        <div 
+          onClick={() => navigate('/horarios')}
+          className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group cursor-pointer"
+        >
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
+          <div className="relative flex justify-between items-start">
+            <div className="space-y-2">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 group-hover:text-amber-500 transition-colors">Horários <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" /></span>
+              <p className="text-4xl font-black text-slate-800">{classStats.percentage}%</p>
+            </div>
+            <div className="p-3 bg-amber-100 text-amber-600 rounded-xl">
+              <CalendarDays className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-amber-600">
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Preenchimento da grade</span>
           </div>
         </div>
       </div>
