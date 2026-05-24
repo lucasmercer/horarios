@@ -1,0 +1,342 @@
+{
+  "teachers": [
+    {
+      "id": "t-adri",
+      "name": "Adri",
+      "subjectIds": ["sub-cien"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-allana",
+      "name": "Allana",
+      "subjectIds": ["sub-mat"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-ana-paula-hornung",
+      "name": "Ana Paula Hornung",
+      "subjectIds": [
+        "sub-his", "sub-hispr", "sub-mktcont", "sub-tecdigmak", "sub-tecdigmark", "sub-segmark", "sub-anmerc", "sub-tecvend"
+      ],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-ana-paula",
+      "name": "Ana Paula Scolanzi",
+      "subjectIds": ["sub-geo", "sub-geopr"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-bernadete",
+      "name": "Bernadete",
+      "subjectIds": ["sub-art"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-bruna",
+      "name": "Bruna",
+      "subjectIds": ["sub-cien"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-cristiane",
+      "name": "Cristiane",
+      "subjectIds": ["sub-edfin"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-dani-carles",
+      "name": "Dani Carles",
+      "subjectIds": ["sub-mat"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-danielle-setti",
+      "name": "Danielle Setti",
+      "subjectIds": ["sub-ram"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-danielly-pietro",
+      "name": "Danielly Pietrochinsky",
+      "subjectIds": ["sub-robot", "sub-mat", "sub-eddigc"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-edu",
+      "name": "Edu",
+      "subjectIds": ["sub-quim"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-eliane",
+      "name": "Eliane",
+      "subjectIds": ["sub-ing"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-gabrielle",
+      "name": "Gabrielle",
+      "subjectIds": ["sub-ing"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-isabella",
+      "name": "Isabella",
+      "subjectIds": ["sub-port"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-janete",
+      "name": "Janete",
+      "subjectIds": ["sub-geo"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-joana",
+      "name": "Joana",
+      "subjectIds": ["sub-ef"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-katiane",
+      "name": "Katiane",
+      "subjectIds": ["sub-rap"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-kelly",
+      "name": "Kelly",
+      "subjectIds": ["sub-art", "sub-artp", "sub-comunmark", "sub-pvida"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-laize",
+      "name": "Laize",
+      "subjectIds": ["sub-port"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-lucineia",
+      "name": "Lucineia",
+      "subjectIds": ["sub-cien"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-luiz-ag",
+      "name": "Luiz Ag",
+      "subjectIds": ["sub-his", "sub-hispr"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-marcia-calixto",
+      "name": "Marcia Calixto",
+      "subjectIds": ["sub-cid", "sub-fil", "sub-ensr"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-maria-e",
+      "name": "Maria E.",
+      "subjectIds": ["sub-port"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-matilde",
+      "name": "Matilde",
+      "subjectIds": ["sub-soc"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-matheus",
+      "name": "Matheus",
+      "subjectIds": ["sub-mat"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-meire",
+      "name": "Meire",
+      "subjectIds": ["sub-port", "sub-redl", "sub-leitpt"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-nathan",
+      "name": "Nathan",
+      "subjectIds": ["sub-ram", "sub-fis", "sub-lafis"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    },
+    {
+      "id": "t-nicole",
+      "name": "Nicole",
+      "subjectIds": ["sub-bio"],
+      "availability": [
+        "seg-1","seg-2","seg-3","seg-4","seg-5","seg-6","seg-7","seg-8","seg-9","seg-10","seg-11","seg-12",
+        "ter-1","ter-2","ter-3","ter-4","ter-5","ter-6","ter-7","ter-8","ter-9","ter-10","ter-11","ter-12",
+        "qua-1","qua-2","qua-3","qua-4","qua-5","qua-6","qua-7","qua-8","qua-9","qua-10","qua-11","qua-12",
+        "qui-1","qui-2","qui-3","qui-4","qui-5","qui-6","qui-7","qui-8","qui-9","qui-10","qui-11","qui-12",
+        "sex-1","sex-2","sex-3","sex-4","sex-5","sex-6","sex-7","sex-8","sex-9","sex-10","sex-11","sex-12"
+      ]
+    }
+  ]
+}
