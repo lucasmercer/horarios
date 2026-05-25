@@ -92,64 +92,67 @@ export default function DashboardCentral() {
 
       const today = new Date();
       let currentTriConfig: TrimesterConfig = {
-        name: savedAcademicSystem && savedAcademicPeriod ? `${savedAcademicPeriod}º ${savedAcademicSystem.replace('al', 'e')}` : '1º Trimestre',
-        startDate: new Date(today.getFullYear(), 1, 5).toISOString().split('T')[0], // 5 Feb
-        endDate: new Date(today.getFullYear(), 4, 15).toISOString().split('T')[0] // 15 May
+        name: '1º Trimestre',
+        startDate: new Date(today.getFullYear(), 1, 5).toISOString().split('T')[0],
+        endDate: new Date(today.getFullYear(), 4, 15).toISOString().split('T')[0]
       };
       
-      const savedAcademicDatesStr = localStorage.getItem('cecm_academic_dates');
-      let foundDateConfig = false;
-
-      if (savedAcademicDatesStr && savedAcademicSystem && savedAcademicPeriod) {
+      if (savedTrimester) {
         try {
-          const datesConfig = JSON.parse(savedAcademicDatesStr);
-          const key = `${savedAcademicSystem}-${savedAcademicPeriod}`;
-          const currentDates = datesConfig[key];
-          if (currentDates) {
-             if (currentDates.start) {
-                const [day, month] = currentDates.start.split('/');
-                if (day && month) {
-                  currentTriConfig.startDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                  foundDateConfig = true;
-                }
-             }
-             if (currentDates.end) {
-                const [day, month] = currentDates.end.split('/');
-                if (day && month) {
-                  currentTriConfig.endDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                  foundDateConfig = true;
-                }
-             }
-          }
-        } catch (e) {
-          console.error("Failed to parse academic dates in dashboard", e);
+          const parsed = JSON.parse(savedTrimester);
+          if (parsed.name) currentTriConfig.name = parsed.name;
+          if (parsed.startDate) currentTriConfig.startDate = parsed.startDate;
+          if (parsed.endDate) currentTriConfig.endDate = parsed.endDate;
+        } catch(e) {}
+      } else {
+        if (savedAcademicSystem && savedAcademicPeriod) {
+          currentTriConfig.name = `${savedAcademicPeriod}º ${savedAcademicSystem.replace('al', 'e')}`;
         }
-      } 
-      
-      if (!foundDateConfig) {
-        // Fallback to legacy config
-        if (savedAcademicStart) {
-          const [day, month] = savedAcademicStart.split('/');
-          if (day && month) {
-            currentTriConfig.startDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-          }
-        } else if (savedTrimester) {
-          try {
-            const parsed = JSON.parse(savedTrimester);
-            if (parsed.startDate) currentTriConfig.startDate = parsed.startDate;
-          } catch(e) {}
-        }
+        
+        const savedAcademicDatesStr = localStorage.getItem('cecm_academic_dates');
+        let foundDateConfig = false;
 
-        if (savedAcademicEnd) {
-          const [day, month] = savedAcademicEnd.split('/');
-          if (day && month) {
-            currentTriConfig.endDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-          }
-        } else if (savedTrimester) {
+        if (savedAcademicDatesStr && savedAcademicSystem && savedAcademicPeriod) {
           try {
-            const parsed = JSON.parse(savedTrimester);
-            if (parsed.endDate) currentTriConfig.endDate = parsed.endDate;
-          } catch(e) {}
+            const datesConfig = JSON.parse(savedAcademicDatesStr);
+            const key = `${savedAcademicSystem}-${savedAcademicPeriod}`;
+            const currentDates = datesConfig[key];
+            if (currentDates) {
+               if (currentDates.start) {
+                  const [day, month] = currentDates.start.split('/');
+                  if (day && month) {
+                    currentTriConfig.startDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                    foundDateConfig = true;
+                  }
+               }
+               if (currentDates.end) {
+                  const [day, month] = currentDates.end.split('/');
+                  if (day && month) {
+                    currentTriConfig.endDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                    foundDateConfig = true;
+                  }
+               }
+            }
+          } catch (e) {
+            console.error("Failed to parse academic dates in dashboard", e);
+          }
+        } 
+        
+        if (!foundDateConfig) {
+          // Fallback to legacy config
+          if (savedAcademicStart) {
+            const [day, month] = savedAcademicStart.split('/');
+            if (day && month) {
+              currentTriConfig.startDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+          }
+
+          if (savedAcademicEnd) {
+            const [day, month] = savedAcademicEnd.split('/');
+            if (day && month) {
+              currentTriConfig.endDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+          }
         }
       }
       
@@ -322,9 +325,9 @@ export default function DashboardCentral() {
              <GraduationCap className="w-10 h-10" />
            </div>
            
-           <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight uppercase mb-3 text-balance">Bem-vindo ao {schoolName}</h1>
-           <p className="text-slate-500 font-medium mb-8 text-xs md:text-sm max-w-xl text-balance leading-relaxed">
-             Parece que este é o seu primeiro acesso ou o sistema foi redefinido. Para ativar todas as funcionalidades e abas laterais, por favor inicie configurando sua grade de forma assistida ou faça a restauração de um backup prévio.
+           <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight uppercase mb-2 text-balance">Bem-vindo(a)</h1>
+           <p className="text-slate-500 font-medium mb-6 text-xs md:text-sm max-w-xl text-balance leading-relaxed">
+             Para ativar as funcionalidades, configure sua nova grade ou importe um backup existente.
            </p>
            
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
