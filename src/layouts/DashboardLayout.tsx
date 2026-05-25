@@ -30,7 +30,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export default function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [schoolName, setSchoolName] = useState('CECM GREGÓRIO');
+  const [schoolName, setSchoolName] = useState('CE LUCAS LENIAR EF.M.P.');
   const [logoUrl, setLogoUrl] = useState('');
   const navigate = useNavigate();
 
@@ -46,7 +46,7 @@ export default function DashboardLayout() {
   const [configApiKey, setConfigApiKey] = useState('');
 
   const handleOpenSettings = () => {
-    setConfigSchoolName(localStorage.getItem('cecm_school_name') || 'CECM GREGÓRIO');
+    setConfigSchoolName(localStorage.getItem('cecm_school_name') || 'CE LUCAS LENIAR EF.M.P.');
     setConfigLogoUrl(localStorage.getItem('cecm_logo_url') || '');
     setConfigEnableNoite(localStorage.getItem('enable_noite_period') === 'true');
     setConfigEnableAsincrona(localStorage.getItem('enable_noite_asynchronous') === 'true');
@@ -155,14 +155,14 @@ export default function DashboardLayout() {
       schedules: JSON.parse(localStorage.getItem('cecm_schedules') || '{}'),
       version: parseInt(localStorage.getItem('cecm_version') || '74', 10),
       logoUrl: localStorage.getItem('cecm_logo_url') || '',
-      schoolName: localStorage.getItem('cecm_school_name') || 'CECM GREGÓRIO SZEREMETA',
+      schoolName: localStorage.getItem('cecm_school_name') || 'CE LUCAS LENIAR EF.M.P.',
       timeRangesManha: JSON.parse(localStorage.getItem('cecm_time_ranges_manha') || 'null'),
       timeRangesTarde: JSON.parse(localStorage.getItem('cecm_time_ranges_tarde') || 'null'),
       timeRangesNoite: JSON.parse(localStorage.getItem('cecm_time_ranges_noite') || 'null'),
       enableNoite: localStorage.getItem('enable_noite_period') === 'true',
       enableNoiteAsynchronous: localStorage.getItem('enable_noite_asynchronous') === 'true',
       exportDate: new Date().toISOString(),
-      appName: "CECM-Scheduler"
+      appName: "GE-Scheduler"
     };
     
     // Cleanup null properties
@@ -258,7 +258,12 @@ export default function DashboardLayout() {
       setSchoolName(ce.detail);
     };
 
+    const handleOpenImport = () => setIsImportOpen(true);
+    const handleOpenExport = () => setIsExportOpen(true);
+
     window.addEventListener('cecm_school_name_changed', handleNameChange);
+    window.addEventListener('cecm_open_import', handleOpenImport);
+    window.addEventListener('cecm_open_export', handleOpenExport);
 
     const checkData = () => {
       try {
@@ -275,6 +280,8 @@ export default function DashboardLayout() {
 
     return () => {
       window.removeEventListener('cecm_school_name_changed', handleNameChange);
+      window.removeEventListener('cecm_open_import', handleOpenImport);
+      window.removeEventListener('cecm_open_export', handleOpenExport);
       clearInterval(intervalId);
     };
   }, []);
@@ -286,7 +293,7 @@ export default function DashboardLayout() {
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard, locked: false },
-    { name: 'Turmas', path: '/alunos', icon: GraduationCap, locked: false },
+    { name: 'Turmas', path: '/alunos', icon: GraduationCap, locked: !hasTurmas },
     { name: 'Disciplinas', path: '/disciplinas', icon: BookOpen, locked: !hasTurmas },
     { name: 'Professores', path: '/professores', icon: Users, locked: !hasTurmas || !hasDisciplinas },
     { name: 'Horários', path: '/horarios', icon: CalendarDays, locked: !hasTurmas || !hasDisciplinas || !hasProfessores },
@@ -295,7 +302,7 @@ export default function DashboardLayout() {
   ];
 
   const handleSupportSend = () => {
-    const text = `Olá Professor Lucas, preciso de suporte no sistema CECM Gestão Escolar!\n\n*Módulo:* ${supportModule}\n*Escola:* ${schoolName}\n*Mensagem:* ${supportMessage || 'Gostaria de tirar uma dúvida.'}`;
+    const text = `Olá Professor Lucas, preciso de suporte no sistema de Gestão Escolar!\n\n*Módulo:* ${supportModule}\n*Escola:* ${schoolName}\n*Mensagem:* ${supportMessage || 'Gostaria de tirar uma dúvida.'}`;
     const encodedText = encodeURIComponent(text);
     const whatsappUrl = `https://wa.me/5542988869655?text=${encodedText}`;
     window.open(whatsappUrl, '_blank');
@@ -334,7 +341,7 @@ export default function DashboardLayout() {
             )}
           </div>
           <div className="w-full text-center px-0.5">
-            <h1 className="text-[8.5px] font-black text-slate-900 leading-tight uppercase tracking-tighter truncate w-full">CECM</h1>
+            <h1 className="text-[8.5px] font-black text-slate-900 leading-tight uppercase tracking-tighter truncate w-full">GE ESCOLAR</h1>
             <p className="text-[7px] text-slate-500 font-bold uppercase tracking-widest truncate w-full">{schoolName}</p>
           </div>
           <button 
@@ -582,7 +589,7 @@ export default function DashboardLayout() {
                         type="text"
                         value={configSchoolName}
                         onChange={(e) => setConfigSchoolName(e.target.value)}
-                        placeholder="Ex: CECM GREGÓRIO SZEREMETA"
+                        placeholder="Ex: CE LUCAS LENIAR EF.M.P."
                         className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-slate-500 bg-slate-50"
                       />
                     </div>
@@ -1073,7 +1080,7 @@ export default function DashboardLayout() {
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider leading-none">
-                      Manual do Sistema CECM
+                      Manual do Sistema
                     </h3>
                     <p className="text-[10px] text-slate-800 font-bold uppercase tracking-wide mt-1">
                       Aprenda a configurar e gerenciar todos os módulos do sistema
@@ -1131,7 +1138,7 @@ export default function DashboardLayout() {
                       </h4>
                       <div className="space-y-3 text-xs text-slate-600 font-sans leading-relaxed">
                         <p>
-                          Bem-vindo ao <strong>Sistema de Gestão Escolar Integrado CECM</strong>. Na tela inicial (Dashboard) você encontra uma visão geral rápida da situação e status de gerência de tempo e professores.
+                          Bem-vindo ao <strong>Sistema de Gestão Escolar Integrado</strong>. Na tela inicial (Dashboard) você encontra uma visão geral rápida da situação e status de gerência de tempo e professores.
                         </p>
                         <ul className="list-disc pl-5 space-y-1.5 font-sans">
                           <li><strong>Configurar Sistema:</strong> Altere as propriedades fundamentais como Nome do Colégio, Logotipo, Modalidades de Período Acadêmico (Trimestre/Bimestre) e ative a arquitetura estrutural do turno Noturno se houver.</li>
