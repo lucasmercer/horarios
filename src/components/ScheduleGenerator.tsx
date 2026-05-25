@@ -338,6 +338,7 @@ export default function ScheduleGenerator() {
   const [academicPeriod, setAcademicPeriod] = useState<number>(1);
   const [academicStartDate, setAcademicStartDate] = useState<string>('');
   const [academicEndDate, setAcademicEndDate] = useState<string>('');
+  const [academicDates, setAcademicDates] = useState<Record<string, {start: string, end: string}>>({});
   const [isAcademicConfigOpen, setIsAcademicConfigOpen] = useState(false);
 
   const getTurmaShift = (t: Turma): 'manha' | 'tarde' | 'noite' => {
@@ -768,6 +769,15 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     if (localStorage.getItem('cecm_academic_period')) setAcademicPeriod(Number(localStorage.getItem('cecm_academic_period')));
     if (localStorage.getItem('cecm_academic_start')) setAcademicStartDate(localStorage.getItem('cecm_academic_start') || '');
     if (localStorage.getItem('cecm_academic_end')) setAcademicEndDate(localStorage.getItem('cecm_academic_end') || '');
+    
+    const savedAcademicDates = localStorage.getItem('cecm_academic_dates');
+    if (savedAcademicDates) {
+      try {
+        setAcademicDates(JSON.parse(savedAcademicDates));
+      } catch (e) {
+        console.error("Failed to parse academic dates", e);
+      }
+    }
 
     const savedVersion = localStorage.getItem('cecm_version');
     if (savedVersion) {
@@ -1191,7 +1201,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     localStorage.setItem('cecm_academic_period', academicPeriod.toString());
     localStorage.setItem('cecm_academic_start', academicStartDate);
     localStorage.setItem('cecm_academic_end', academicEndDate);
-  }, [teachers, subjects, turmas, schedules, version, logoUrl, schoolName, academicSystem, academicPeriod, academicStartDate, academicEndDate, dataLoaded]);
+    localStorage.setItem('cecm_academic_dates', JSON.stringify(academicDates));
+  }, [teachers, subjects, turmas, schedules, version, logoUrl, schoolName, academicSystem, academicPeriod, academicStartDate, academicEndDate, academicDates, dataLoaded]);
 
   // Backup functions
   const handleExportData = () => {
@@ -6728,10 +6739,19 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Sistema Vigente</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Modalidade</label>
                   <select
                     value={academicSystem}
-                    onChange={(e) => setAcademicSystem(e.target.value as any)}
+                    onChange={(e) => {
+                      const newSystem = e.target.value as any;
+                      setAcademicSystem(newSystem);
+                      let newPeriod = academicPeriod;
+                      if (newSystem === 'Trimestral' && newPeriod > 3) newPeriod = 3;
+                      setAcademicPeriod(newPeriod);
+                      const key = `${newSystem}-${newPeriod}`;
+                      setAcademicStartDate(academicDates[key]?.start || '');
+                      setAcademicEndDate(academicDates[key]?.end || '');
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
                   >
                     <option value="Bimestral">Bimestral</option>
@@ -6740,10 +6760,16 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 </div>
                 
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Período Selecionado</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Período Vigente</label>
                   <select
                     value={academicPeriod}
-                    onChange={(e) => setAcademicPeriod(Number(e.target.value))}
+                    onChange={(e) => {
+                      const newPeriod = Number(e.target.value);
+                      setAcademicPeriod(newPeriod);
+                      const key = `${academicSystem}-${newPeriod}`;
+                      setAcademicStartDate(academicDates[key]?.start || '');
+                      setAcademicEndDate(academicDates[key]?.end || '');
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
                   >
                     <option value={1}>1º {academicSystem.replace('al', 'e')}</option>
@@ -6753,27 +6779,48 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Data de Início</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ex: 01/02"
-                      value={academicStartDate}
-                      onChange={(e) => setAcademicStartDate(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Data de Término</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ex: 15/04"
-                      value={academicEndDate}
-                      onChange={(e) => setAcademicEndDate(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
-                    />
-                  </div>
+                <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                  {Array.from({ length: academicSystem === 'Bimestral' ? 4 : 3 }).map((_, i) => {
+                    const p = i + 1;
+                    const key = `${academicSystem}-${p}`;
+                    return (
+                      <div key={p} className="p-3 bg-slate-50 border border-slate-200 rounded-xl relative">
+                        <div className="absolute top-0 right-0 px-2 py-0.5 bg-slate-200 text-[9px] font-bold text-slate-600 rounded-bl-xl rounded-tr-xl uppercase">
+                          {p}º {academicSystem.replace('al', 'e')}
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 mt-2">
+                          <div>
+                            <label className="text-[9px] font-black uppercase text-slate-500 mb-1 block">Início</label>
+                            <input 
+                              type="text" 
+                              placeholder="Ex: 01/02"
+                              value={academicDates[key]?.start || ''}
+                              onChange={(e) => {
+                                const newDates = {...academicDates, [key]: {...(academicDates[key] || {start:'', end:''}), start: e.target.value}};
+                                setAcademicDates(newDates);
+                                if (p === academicPeriod) setAcademicStartDate(e.target.value);
+                              }}
+                              className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-black uppercase text-slate-500 mb-1 block">Término</label>
+                            <input 
+                              type="text" 
+                              placeholder="Ex: 15/04"
+                              value={academicDates[key]?.end || ''}
+                              onChange={(e) => {
+                                const newDates = {...academicDates, [key]: {...(academicDates[key] || {start:'', end:''}), end: e.target.value}};
+                                setAcademicDates(newDates);
+                                if (p === academicPeriod) setAcademicEndDate(e.target.value);
+                              }}
+                              className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
