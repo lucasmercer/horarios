@@ -237,6 +237,38 @@ export default function DashboardLayout() {
     if (data.enableNoite !== undefined) localStorage.setItem('enable_noite_period', data.enableNoite ? 'true' : 'false');
     if (data.enableNoiteAsynchronous !== undefined) localStorage.setItem('enable_noite_asynchronous', data.enableNoiteAsynchronous ? 'true' : 'false');
     
+    if (data.academicSystem) {
+      localStorage.setItem('cecm_academic_system', data.academicSystem);
+    }
+    if (data.academicDates) {
+      localStorage.setItem('cecm_academic_dates', JSON.stringify(data.academicDates));
+      
+      const sys = data.academicSystem || 'Bimestral';
+      const today = new Date();
+      const numPeriods = sys === 'Bimestral' ? 4 : 3;
+      for (let p = 1; p <= numPeriods; p++) {
+        const key = `${sys}-${p}`;
+        const dates = data.academicDates[key];
+        if (dates && dates.start && dates.end) {
+          const parts = dates.start.split('/');
+          if (parts.length === 2) {
+            const start = new Date(today.getFullYear(), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            const endParts = dates.end.split('/');
+            const end = new Date(today.getFullYear(), parseInt(endParts[1]) - 1, parseInt(endParts[0]));
+            if (end < start) end.setFullYear(end.getFullYear() + 1);
+            start.setHours(0,0,0,0);
+            end.setHours(23,59,59,999);
+            if (today >= start && today <= end) {
+              localStorage.setItem('cecm_academic_period', p.toString());
+              localStorage.setItem('cecm_academic_start', dates.start);
+              localStorage.setItem('cecm_academic_end', dates.end);
+              break;
+            }
+          }
+        }
+      }
+    }
+
     setIsImportConfirmOpen(false);
     setIsImportOpen(false);
     window.location.reload();
@@ -1162,8 +1194,20 @@ export default function DashboardLayout() {
                         </p>
                         <ul className="list-disc pl-5 space-y-1.5 font-sans">
                           <li><strong className="text-slate-900 text-[11px] block mt-2">Visão Geral:</strong> Exibe a grade real separada por turmas ou laboratórios. Dias e janelas de aulas são exibidos lado a lado num quadrante estático. Lembre-se, o turno da noite possui arquitetura de 5 tempos caso selecionado, ou 5 aulas + 1 tempo assíncrono final se a opção da carga EAD noturna estiver ativada nas configurações.</li>
-                          <li><strong className="text-slate-900 text-[11px] block mt-2">Alocação Manual e Algoritmo:</strong> Use "Gerar Auto" para usar os algoritmos internos de alocação de tempo buscando preencher todas as janelas possíveis seguindo restrições hardcoded. Pressionando nas lacunas temporais para editar, o processo torna-se inteiramente Manual, bloqueando o software de injetar aulas nas janelas que já bloqueou deliberadamente.</li>
-                          <li><strong className="text-slate-900 text-[11px] block mt-2">Diagnósticos e Ajustes (Limpeza e Mudanças):</strong> Use os botões diagnósticos (como o Alerta Vermelho superior / Limpar Grade) para lidar com anomalias onde aulas a mais foram introduzidas a turmas superlotadas.</li>
+                          <li><strong className="text-slate-900 text-[11px] block mt-2">Alocação Automática:</strong> Use "Gerar Auto" para usar os algoritmos internos de alocação de tempo buscando preencher todas as janelas possíveis seguindo restrições hardcoded e disponibilidade de professores.</li>
+                          <li><strong className="text-slate-900 text-[11px] block mt-2">Alocação e Edição Manual:</strong> Pressionando nas lacunas temporais para editar, o processo torna-se inteiramente Manual.
+                            <ul className="list-[circle] pl-4 mt-1 space-y-1">
+                              <li><strong>Aulas Geminadas:</strong> O sistema sugere aulas duplas (geminadas) para professores que têm esta preferência. Caso ativado, os cálculos de carga horária e conflitos englobarão os 2 tempos. Se a disciplina necessitar de laboratório, serão alocados simultaneamente os 2 tempos na sala da turma, e os 2 tempos na sala do laboratório (espelhamento).</li>
+                              <li><strong>Associação com Laboratórios (Inteligente):</strong> Se você selecionar uma Matéria que exige laboratórios, a opção de "Espelhar em Sala Especial?" selecionará e carimbará o primeiro laboratório correspondente que estiver livre neste horário <strong>automaticamente</strong>.</li>
+                              <li><strong>Conflitos de Espaço Físico:</strong> Se existirem apenas laboratórios ocupados por outras turmas no horário escolhido, o sistema exibirá um aviso alertando qual turma está nele. O sistema permitirá "Forçar Troca", onde a sua turma atual "tomará a posse" da sala, e a turma que anteriormente possuia a reserva da sala perderá apenas o espelhamento no laboratório (mas terá sua aula regular na sala de aula convencional inalterada).</li>
+                            </ul>
+                          </li>
+                          <li><strong className="text-slate-900 text-[11px] block mt-2">Reorganização Rápida (Arrastar e Soltar):</strong> Você pode arrastar uma aula (clique, segure e mova) para uma lacuna vazia no calendário ou sobre uma aula existente para realizar a troca direta de dias e horários - a funcionalidade de drag and drop obedece as seguintes checagens:
+                            <ul className="list-[circle] pl-4 mt-1 space-y-1">
+                              <li>A reorganização manual <strong>só é permitida dentro da própria turma</strong> para não corromper os cálculos internos de carga horária do sistema gerador completo.</li>
+                              <li>Se a aula movida for vinculada a algum laboratório, todo o espelhamento acompanhará a aula ou acusará erro caso o laboratório de destino já esteja ocupado naquele horário.</li>
+                            </ul>
+                          </li>
                         </ul>
                       </div>
                     </div>
@@ -1192,12 +1236,22 @@ export default function DashboardLayout() {
                     <div className="space-y-4 animate-in fade-in duration-200">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2 border-b-2 border-slate-100 pb-2">
                         <GraduationCap className="w-4 h-4 text-pink-600 px-0.5" />
-                        4. Distribuição de Turmas e Alunos
+                        4. Distribuição de Turmas e Infraestrutura
                       </h4>
                       <div className="space-y-3 text-xs text-slate-600 font-sans leading-relaxed">
                         <p>
-                          A aba de Turmas armazena o corpo discente físico alocado (como os agrupamentos de 1º ano B - Tarde). Toda turma pode requerer a construção de salas especializadas no banco de infraestrutura, permitindo a separação de turmas padrão e turmas que rotacionam.
+                          A aba de Turmas gerencia as salas físicas da escola, divididas em duas grandes categorias: as <strong>Turmas Padrões</strong> (que acomodam os alunos regularmente) e as <strong>Salas Especiais/Laboratórios</strong>.
                         </p>
+                        <ul className="list-disc pl-5 space-y-1.5 font-sans">
+                          <li><strong>Turmas Regulares:</strong> Armazena o corpo discente físico alocado (como os agrupamentos de 1º ano B - Tarde). Cada turma possui um limite de preenchimento diário (geralmente até a 5ª ou 6ª aula).</li>
+                          <li><strong>Cadastro de Salas Especiais (Laboratórios, Quadras, etc):</strong> Você pode cadastrar ambientes de infraestrutura (Laboratório de Informática, Quadra de Esportes, Sala de Artes) no botão "Adicionar Sala Especial". Estas salas não "pertencem" a alunos fixos, mas são utilizadas pelas turmas de modo rotativo.
+                            <ul className="list-[circle] pl-4 mt-1 space-y-1">
+                              <li><strong>Cores Customizadas:</strong> Atribua uma cor ao laboratório para fácil distinção visual na view de Horários.</li>
+                              <li><strong>Visualização Isolada:</strong> No módulo de Horários, alternei a visualização para "Ver Salas Especiais" e você terá um calendário focado apenas na ocupação de todos os laboratórios cadastrados, verificando conflitos de infraestrutura.</li>
+                            </ul>
+                          </li>
+                          <li><strong>Vinculação com Disciplinas:</strong> No módulo de Disciplinas, você poderá marcar uma matéria (ex: Educação Física) para exigir ou utilizar essas Salas Especiais (ex: Quadra). O gerador de horários usará esta infraestrutura automaticamente para espelhar a aula e ocupar a sala.</li>
+                        </ul>
                       </div>
                     </div>
                   )}
