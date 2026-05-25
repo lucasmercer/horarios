@@ -72,6 +72,10 @@ export default function DashboardCentral() {
       const savedSchedules = localStorage.getItem('cecm_schedules');
       const savedNotices = localStorage.getItem('cecm_notices');
       const savedTrimester = localStorage.getItem('cecm_trimester_config');
+      const savedAcademicSystem = localStorage.getItem('cecm_academic_system');
+      const savedAcademicPeriod = localStorage.getItem('cecm_academic_period');
+      const savedAcademicStart = localStorage.getItem('cecm_academic_start');
+      const savedAcademicEnd = localStorage.getItem('cecm_academic_end');
       
       if (savedSchoolName) setSchoolName(savedSchoolName);
 
@@ -88,14 +92,30 @@ export default function DashboardCentral() {
 
       const today = new Date();
       let currentTriConfig: TrimesterConfig = {
-        name: '1º Trimestre',
+        name: savedAcademicSystem && savedAcademicPeriod ? `${savedAcademicPeriod}º ${savedAcademicSystem.replace('al', 'e')}` : '1º Trimestre',
         startDate: new Date(today.getFullYear(), 1, 5).toISOString().split('T')[0], // 5 Feb
         endDate: new Date(today.getFullYear(), 4, 15).toISOString().split('T')[0] // 15 May
       };
       
-      if (savedTrimester) {
-        currentTriConfig = JSON.parse(savedTrimester);
+      if (savedAcademicStart) {
+        // Convert "01/02" to "YYYY-MM-DD"
+        const [day, month] = savedAcademicStart.split('/');
+        if (day && month) {
+          currentTriConfig.startDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+      } else if (savedTrimester) {
+        currentTriConfig.startDate = JSON.parse(savedTrimester).startDate;
       }
+
+      if (savedAcademicEnd) {
+        const [day, month] = savedAcademicEnd.split('/');
+        if (day && month) {
+          currentTriConfig.endDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+      } else if (savedTrimester) {
+        currentTriConfig.endDate = JSON.parse(savedTrimester).endDate;
+      }
+      
       setTrimesterConfig(currentTriConfig);
 
       // Calculate progress
@@ -345,21 +365,29 @@ export default function DashboardCentral() {
 
         <div 
           onClick={() => navigate('/horarios')}
-          className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group cursor-pointer"
+          className={`bg-white p-6 rounded-2xl border ${classStats.percentage > 100 ? 'border-rose-300 bg-rose-50/10' : 'border-slate-200'} shadow-sm hover:shadow-md transition-all relative overflow-hidden group cursor-pointer`}
         >
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
+          <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full group-hover:scale-110 transition-transform duration-500 ${classStats.percentage > 100 ? 'bg-rose-50' : 'bg-amber-50'}`} />
           <div className="relative flex justify-between items-start">
             <div className="space-y-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 group-hover:text-amber-500 transition-colors">Horários <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" /></span>
-              <p className="text-4xl font-black text-slate-800">{classStats.percentage}%</p>
+              <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 transition-colors ${classStats.percentage > 100 ? 'text-rose-500 group-hover:text-rose-600' : 'text-slate-400 group-hover:text-amber-500'}`}>Horários <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" /></span>
+              <p className={`text-4xl font-black ${classStats.percentage > 100 ? 'text-rose-600' : 'text-slate-800'}`}>{classStats.percentage}%</p>
             </div>
-            <div className="p-3 bg-amber-100 text-amber-600 rounded-xl">
+            <div className={`p-3 rounded-xl ${classStats.percentage > 100 ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
               <CalendarDays className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-amber-600">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Preenchimento da grade</span>
+          <div className={`mt-4 flex flex-col gap-0.5 text-xs font-bold ${classStats.percentage > 100 ? 'text-rose-600' : 'text-amber-600'}`}>
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>{classStats.percentage > 100 ? 'Grade Excedida (Inconsistência)' : 'Preenchimento da grade'}</span>
+            </div>
+            {classStats.percentage > 100 && (
+              <span className="text-[10px] text-rose-500 mt-0.5 font-semibold">Excedeu limite em {classStats.excess} aula(s). Revise.</span>
+            )}
+            {classStats.conflicts > 0 && (
+              <span className="text-[10px] text-rose-500 mt-0.5 font-semibold">{classStats.conflicts} conflito(s) em mesmo horário.</span>
+            )}
           </div>
         </div>
       </div>

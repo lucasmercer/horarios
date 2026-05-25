@@ -21,7 +21,10 @@ import {
   Download,
   Key,
   HelpCircle,
-  Lock
+  Lock,
+  CalendarClock,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -112,8 +115,37 @@ export default function DashboardLayout() {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isManualOpen, setIsManualOpen] = useState(false);
   const [manualActiveTab, setManualActiveTab] = useState('geral');
+  const [isResetOpen, setIsResetOpen] = useState(false);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
   const [supportModule, setSupportModule] = useState('Geral');
   const [supportMessage, setSupportMessage] = useState('');
+
+  const handleResetSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError('');
+    setIsResetting(true);
+
+    if (resetPassword !== 'ccm2024') {
+      setIsResetting(false);
+      setResetError('Senha incorreta.');
+      return;
+    }
+
+    setTimeout(() => {
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('cecm_') || key.startsWith('enable_noite_')) {
+          localStorage.removeItem(key);
+        }
+      });
+      setIsResetting(false);
+      setIsResetOpen(false);
+      setResetPassword('');
+      // Force reload to completely wipe memory state
+      window.location.reload();
+    }, 1000);
+  };
 
   const handleExportBackup = () => {
     const data = {
@@ -258,6 +290,7 @@ export default function DashboardLayout() {
     { name: 'Disciplinas', path: '/disciplinas', icon: BookOpen, locked: !hasTurmas },
     { name: 'Professores', path: '/professores', icon: Users, locked: !hasTurmas || !hasDisciplinas },
     { name: 'Horários', path: '/horarios', icon: CalendarDays, locked: !hasTurmas || !hasDisciplinas || !hasProfessores },
+    { name: 'Substituições', path: '/substituicoes', icon: CalendarClock, locked: !hasTurmas || !hasDisciplinas || !hasProfessores },
     { name: 'Atas de Reunião', path: '/atas', icon: FileText, locked: false },
   ];
 
@@ -369,6 +402,16 @@ export default function DashboardLayout() {
         <div className="mt-auto border-t border-slate-100 pt-2 space-y-0.5 px-1">
           <button
             onClick={() => {
+              setIsResetOpen(true);
+              setIsSidebarOpen(false);
+            }}
+            className="w-full flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg text-[8px] font-bold text-red-500 hover:text-red-700 hover:bg-red-50 transition-all uppercase tracking-tighter"
+          >
+            <Trash2 className="w-4 h-4 shrink-0" />
+            <span className="truncate w-full block">Resetar</span>
+          </button>
+          <button
+            onClick={() => {
               setIsManualOpen(true);
               setIsSidebarOpen(false);
             }}
@@ -403,7 +446,7 @@ export default function DashboardLayout() {
           </button>
           
           <div className="pt-1.5 text-center">
-            <span className="text-[7px] font-bold text-slate-800 uppercase tracking-widest pl-0.5">V 1.0.75</span>
+            <span className="text-[7px] font-bold text-slate-800 uppercase tracking-widest pl-0.5">V 1.0.76</span>
           </div>
         </div>
       </aside>
@@ -827,6 +870,86 @@ export default function DashboardLayout() {
                   </button>
                 </div>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isResetOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-slate-200"
+            >
+              <div className="flex justify-between items-center mb-5">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <Trash2 className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Resetar Tudo</h2>
+                    <p className="text-[10px] text-slate-500 font-medium">Você está prestes a apagar completamente os dados.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsResetOpen(false)}
+                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleResetSubmit} className="space-y-4">
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                  <div className="flex items-start gap-2 text-red-800">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <p className="text-[11px] leading-relaxed font-bold">
+                      Isso apagará todas as disciplinas, professores, turmas e grade de horários do navegador local.
+                      <span className="block mt-1 font-black underline">Esta operação é irreversível se você não tiver feito backup.</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-black tracking-widest text-slate-500 block mb-1">
+                    Confirme o código do sistema:
+                  </label>
+                  <input
+                    type="password"
+                    value={resetPassword}
+                    onChange={(e) => setResetPassword(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-red-500 transition-colors"
+                    placeholder="••••••"
+                    autoFocus
+                  />
+                  {resetError && <p className="text-[10px] text-red-600 mt-1 font-bold">{resetError}</p>}
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsResetOpen(false)}
+                    className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 font-bold text-xs uppercase tracking-wider rounded-xl transition hover:bg-slate-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isResetting || !resetPassword}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition hover:bg-red-700 disabled:opacity-50 flex items-center justify-center"
+                  >
+                    {isResetting ? 'Aguarde...' : 'Confirmar e Apagar'}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </motion.div>
         )}

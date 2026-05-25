@@ -10,6 +10,7 @@ import ScheduleGenerator from './components/ScheduleGenerator';
 import DashboardLayout from './layouts/DashboardLayout';
 import DashboardCentral from './components/DashboardCentral';
 import Atas from './components/Atas';
+import Substitutions from './components/Substitutions';
 
 // Mock views for other modules
 const PlaceholderView = ({ title, subtitle }: { title: string, subtitle: string }) => (
@@ -180,6 +181,7 @@ export default function App() {
           <Route path="professores" element={<div className="h-full w-full flex flex-col max-w-[1600px] mx-auto"><ScheduleGenerator /></div>} />
           <Route path="alunos" element={<div className="h-full w-full flex flex-col max-w-[1600px] mx-auto"><ScheduleGenerator /></div>} />
           <Route path="disciplinas" element={<div className="h-full w-full flex flex-col max-w-[1600px] mx-auto"><ScheduleGenerator /></div>} />
+          <Route path="substituicoes" element={<Substitutions />} />
           <Route path="atas" element={<Atas />} />
         </Route>
       </Routes>

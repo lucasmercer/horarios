@@ -1,0 +1,111 @@
+289-    if (!isUniversal && (!s.allowedTurmaIds || s.allowedTurmaIds.length === 0) && turmasWithThisSubject.size > 0) {
+290-      s.allowedTurmaIds = Array.from(turmasWithThisSubject);
+291-      changed = true;
+292-    }
+293-
+294-    return s;
+295-  });
+296-
+297-  return { updatedSubjects, changed };
+298-};
+299-
+300-const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
+301-  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+302-    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.455 5.703 1.456h.004c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+303-  </svg>
+304-);
+305-
+306-export default function ScheduleGenerator() {
+307-  const location = useLocation();
+308-  const isProfessoresRoute = location.pathname === '/professores';
+309:  const isAlunosRoute = location.pathname === '/alunos';
+310-  const isDisciplinasRoute = location.pathname === '/disciplinas';
+311:  const isHorariosRoute = location.pathname === '/' || location.pathname === '/horarios' || (!isProfessoresRoute && !isAlunosRoute && !isDisciplinasRoute);
+312-
+313-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+314-  const [subjects, setSubjects] = useState<Subject[]>([]);
+315-  const [turmas, setTurmas] = useState<Turma[]>([]);
+316-  const [schedules, setSchedules] = useState<AllSchedules>({});
+317-  const [schedulesHistory, setSchedulesHistory] = useState<AllSchedules[]>([]);
+318-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+319-  const skipNextHistoryRef = React.useRef(false);
+320-
+321-  const schedulesHistoryRef = React.useRef(schedulesHistory);
+322-  const historyIndexRef = React.useRef(historyIndex);
+323-
+324-  React.useEffect(() => {
+325-    schedulesHistoryRef.current = schedulesHistory;
+326-    historyIndexRef.current = historyIndex;
+327-  }, [schedulesHistory, historyIndex]);
+328-  const [dataLoaded, setDataLoaded] = useState(false);
+329-  const [version, setVersion] = useState<number>(74);
+330-  const [logoUrl, setLogoUrl] = useState<string>('http://lucasleniar.com.br/mint/civico.png');
+331-  const [showLogoInput, setShowLogoInput] = useState(false);
+--
+6987-                <button 
+6988-                  type="button"
+6989-                  onClick={() => {
+6990-                    localStorage.setItem('cecm_time_ranges_manha', JSON.stringify(timeRangesManha));
+6991-                    localStorage.setItem('cecm_time_ranges_tarde', JSON.stringify(timeRangesTarde));
+6992-                    localStorage.setItem('cecm_time_ranges_noite', JSON.stringify(timeRangesNoite));
+6993-                    setIsConfiguringTimeRanges(false);
+6994-                  }}
+6995-                  className="flex-1 px-4 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-black transition-all uppercase tracking-widest cursor-pointer"
+6996-                >
+6997-                  Salvar Alterações
+6998-                </button>
+6999-              </div>
+7000-            </motion.div>
+7001-          </div>
+7002-        )}
+7003-      </AnimatePresence>
+7004-
+7005-      {/* Turmas Management Modal */}
+7006-      <AnimatePresence>
+7007:        {(isAddingTurma || isAlunosRoute) && (
+7008:          <div className={isAlunosRoute ? "flex-1 w-full bg-slate-50 flex items-start justify-center p-4 md:p-8 animate-in fade-in overflow-y-auto" : "fixed inset-0 z-[85] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"}>
+7009-            <motion.div 
+7010:              initial={isAlunosRoute ? {} : { opacity: 0, scale: 0.9 }}
+7011:              animate={isAlunosRoute ? {} : { opacity: 1, scale: 1 }}
+7012:              exit={isAlunosRoute ? {} : { opacity: 0, scale: 0.9 }}
+7013:              className={`bg-white shadow-2xl space-y-6 flex flex-col ${isAlunosRoute ? 'rounded-[2rem] p-8 w-full max-w-5xl border border-slate-200 min-h-[85vh]' : 'rounded-3xl p-8 w-full max-w-md'}`}
+7014-            >
+7015-              <div className="flex justify-between items-center shrink-0">
+7016-                <h3 className="text-xl font-black text-slate-900 uppercase">
+7017-                  {editingTurmaId ? 'Editar Turma' : 'Gerenciar Turmas'}
+7018-                </h3>
+7019:                {!isAlunosRoute && (
+7020-                <button 
+7021-                  onClick={() => {
+7022-                    setIsAddingTurma(false);
+7023-                    setEditingTurmaId(null);
+7024-                    setNewTurmaName('');
+7025-                  }} 
+7026-                  className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-500"
+7027-                >
+7028-                  ×
+7029-                </button>
+7030-                )}
+7031-              </div>
+7032-
+7033:              <div className={`space-y-4 flex-1 flex flex-col ${isAlunosRoute ? 'overflow-y-auto' : ''}`}>
+7034-                <div className="grid grid-cols-1 gap-2">
+7035-                  <div className="flex gap-2">
+7036-                      <input 
+7037-                        type="text" 
+7038-                        value={newTurmaName}
+7039-                        onChange={e => setNewTurmaName(e.target.value.toUpperCase())}
+7040-                        onKeyDown={e => e.key === 'Enter' && addTurma()}
+7041-                        placeholder="Nome da Turma (Ex: 6ºA)"
+7042-                        className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:border-slate-900 transition-all"
+7043-                      />
+7044-                    <button onClick={addTurma} className={`px-6 rounded-xl transition-all ${editingTurmaId ? 'bg-[#657c36] text-white' : 'bg-slate-900 text-white hover:bg-black'}`}>
+7045-                      {editingTurmaId ? <CheckCircle2 className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+7046-                    </button>
+7047-                  </div>
+7048-                  <div className="flex flex-col gap-2">
+7049-                    <select
+7050-                      value={newTurmaShift}
+7051-                      onChange={e => setNewTurmaShift(e.target.value as any)}
+7052-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-black text-slate-500 focus:outline-none focus:border-slate-900 transition-all"
+7053-                    >
