@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, GraduationCap, BookOpen, CalendarDays, Bell, AlertCircle, TrendingUp, Clock, Plus, X, Edit2, Trash2, ArrowRight, Settings } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, CalendarDays, Bell, AlertCircle, TrendingUp, Clock, Plus, X, Edit2, Trash2, ArrowRight, Settings, Sparkles, Save, FileText } from 'lucide-react';
 
 export type NoticeType = 'urgent' | 'warning' | 'info';
 
@@ -37,7 +37,7 @@ export default function DashboardCentral() {
 
   const [incompleteTeachersCount, setIncompleteTeachersCount] = useState(0);
 
-  const [schoolName, setSchoolName] = useState('CECM GREGÓRIO SZEREMETA');
+  const [schoolName, setSchoolName] = useState(() => localStorage.getItem('cecm_school_name') || 'CE LUCAS LENIAR EF.M.P.');
   const [notices, setNotices] = useState<Notice[]>([]);
   const [isEditingNotice, setIsEditingNotice] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -97,23 +97,60 @@ export default function DashboardCentral() {
         endDate: new Date(today.getFullYear(), 4, 15).toISOString().split('T')[0] // 15 May
       };
       
-      if (savedAcademicStart) {
-        // Convert "01/02" to "YYYY-MM-DD"
-        const [day, month] = savedAcademicStart.split('/');
-        if (day && month) {
-          currentTriConfig.startDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-        }
-      } else if (savedTrimester) {
-        currentTriConfig.startDate = JSON.parse(savedTrimester).startDate;
-      }
+      const savedAcademicDatesStr = localStorage.getItem('cecm_academic_dates');
+      let foundDateConfig = false;
 
-      if (savedAcademicEnd) {
-        const [day, month] = savedAcademicEnd.split('/');
-        if (day && month) {
-          currentTriConfig.endDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      if (savedAcademicDatesStr && savedAcademicSystem && savedAcademicPeriod) {
+        try {
+          const datesConfig = JSON.parse(savedAcademicDatesStr);
+          const key = `${savedAcademicSystem}-${savedAcademicPeriod}`;
+          const currentDates = datesConfig[key];
+          if (currentDates) {
+             if (currentDates.start) {
+                const [day, month] = currentDates.start.split('/');
+                if (day && month) {
+                  currentTriConfig.startDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                  foundDateConfig = true;
+                }
+             }
+             if (currentDates.end) {
+                const [day, month] = currentDates.end.split('/');
+                if (day && month) {
+                  currentTriConfig.endDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                  foundDateConfig = true;
+                }
+             }
+          }
+        } catch (e) {
+          console.error("Failed to parse academic dates in dashboard", e);
         }
-      } else if (savedTrimester) {
-        currentTriConfig.endDate = JSON.parse(savedTrimester).endDate;
+      } 
+      
+      if (!foundDateConfig) {
+        // Fallback to legacy config
+        if (savedAcademicStart) {
+          const [day, month] = savedAcademicStart.split('/');
+          if (day && month) {
+            currentTriConfig.startDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          }
+        } else if (savedTrimester) {
+          try {
+            const parsed = JSON.parse(savedTrimester);
+            if (parsed.startDate) currentTriConfig.startDate = parsed.startDate;
+          } catch(e) {}
+        }
+
+        if (savedAcademicEnd) {
+          const [day, month] = savedAcademicEnd.split('/');
+          if (day && month) {
+            currentTriConfig.endDate = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          }
+        } else if (savedTrimester) {
+          try {
+            const parsed = JSON.parse(savedTrimester);
+            if (parsed.endDate) currentTriConfig.endDate = parsed.endDate;
+          } catch(e) {}
+        }
       }
       
       setTrimesterConfig(currentTriConfig);
@@ -274,6 +311,60 @@ export default function DashboardCentral() {
       setTrimesterProgress(Math.round((elapsed / totalDuration) * 100));
     }
   };
+
+  const isFirstAccess = stats.turmas === 0 && stats.teachers === 0 && stats.subjects === 0;
+
+  if (isFirstAccess) {
+    return (
+      <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center">
+        <div className="bg-white p-6 md:p-8 rounded-3xl shadow-xl border border-slate-200 flex flex-col items-center text-center max-w-3xl w-full">
+           <div className="w-20 h-20 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mb-6 shadow-inner">
+             <GraduationCap className="w-10 h-10" />
+           </div>
+           
+           <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight uppercase mb-3 text-balance">Bem-vindo ao {schoolName}</h1>
+           <p className="text-slate-500 font-medium mb-8 text-xs md:text-sm max-w-xl text-balance leading-relaxed">
+             Parece que este é o seu primeiro acesso ou o sistema foi redefinido. Para ativar todas as funcionalidades e abas laterais, por favor inicie configurando sua grade de forma assistida ou faça a restauração de um backup prévio.
+           </p>
+           
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+             <button 
+               onClick={() => navigate('/horarios?wizard=true')}
+               className="flex flex-col items-center justify-center gap-3 p-8 bg-purple-600 border border-purple-700 rounded-2xl text-white hover:bg-purple-700 transition-all cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 group"
+             >
+               <Sparkles className="w-10 h-10 text-amber-300 animate-pulse group-hover:scale-110 transition-transform" />
+               <span className="text-lg font-black uppercase tracking-widest block drop-shadow-sm">Wizzard (Início Fácil)</span>
+               <span className="text-[11px] text-purple-200 font-medium leading-relaxed px-4 opacity-90 group-hover:opacity-100">
+                 Configuração passo a passo interativa para criar suas turmas, matriz curricular, docentes e gerar a primeira grade escolar.
+               </span>
+             </button>
+
+             <button 
+               onClick={() => window.dispatchEvent(new Event('cecm_open_import'))}
+               className="flex flex-col items-center justify-center gap-3 p-8 bg-emerald-600 border border-emerald-700 rounded-2xl text-white hover:bg-emerald-700 transition-all cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 group"
+             >
+               <Save className="w-10 h-10 text-emerald-200 group-hover:scale-110 transition-transform" />
+               <span className="text-lg font-black uppercase tracking-widest block drop-shadow-sm">Restaurar Backup</span>
+               <span className="text-[11px] text-emerald-100 font-medium leading-relaxed px-4 opacity-90 group-hover:opacity-100">
+                 Já possui um arquivo .txt de um backup anterior? Importe as tabelas, salas e grades geradas previamente em poucos segundos.
+               </span>
+             </button>
+           </div>
+           
+           <div className="w-full mt-10 pt-8 border-t border-slate-100 flex flex-col items-center justify-center gap-4">
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Acesso Isolado Permitido</p>
+              <button
+                 onClick={() => navigate('/atas')}
+                 className="flex items-center gap-2 px-8 py-3 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800 rounded-xl font-bold uppercase tracking-wider text-xs transition-colors"
+              >
+                 <FileText className="w-4 h-4" />
+                 Módulo de Atas
+              </button>
+           </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
@@ -461,7 +552,7 @@ export default function DashboardCentral() {
             <div className="space-y-6 relative z-10">
               <div className="space-y-1 text-center">
                 <p className="text-3xl font-black tracking-tight mt-1 truncate max-w-full text-blue-400">{trimesterConfig.name}</p>
-                <div className="w-full bg-slate-700 h-2 rounded-full mt-4 overflow-hidden" title={`${trimesterConfig.startDate} até ${trimesterConfig.endDate}`}>
+                <div className="w-full bg-slate-700 h-2 rounded-full mt-4 overflow-hidden" title={`${trimesterConfig.startDate.split('-').reverse().join('/')} até ${trimesterConfig.endDate.split('-').reverse().join('/')}`}>
                   <div className="bg-blue-400 h-full rounded-full transition-all duration-1000" style={{ width: `${trimesterProgress}%` }} />
                 </div>
                 <div className="flex justify-between items-center mt-2 px-1">
