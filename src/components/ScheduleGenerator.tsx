@@ -314,6 +314,7 @@ export default function ScheduleGenerator() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [schedules, setSchedules] = useState<AllSchedules>({});
+  const [substitutions, setSubstitutions] = useState<any[]>([]);
   const [schedulesHistory, setSchedulesHistory] = useState<AllSchedules[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const skipNextHistoryRef = React.useRef(false);
@@ -330,7 +331,7 @@ export default function ScheduleGenerator() {
   const [logoUrl, setLogoUrl] = useState<string>('http://lucasleniar.com.br/mint/civico.png');
   const [showLogoInput, setShowLogoInput] = useState(false);
   const [tempLogoUrl, setTempLogoUrl] = useState('');
-  const [schoolName, setSchoolName] = useState<string>('CECM GREGÓRIO SZEREMETA');
+  const [schoolName, setSchoolName] = useState<string>('CE LUCAS LENIAR EF.M.P.');
   const [showSchoolInput, setShowSchoolInput] = useState(false);
   const [tempSchoolName, setTempSchoolName] = useState('');
 
@@ -647,6 +648,14 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [helpActiveTab, setHelpActiveTab] = useState('geral');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+
+  useEffect(() => {
+    if (location.search.includes('wizard=true')) {
+      setIsWizardOpen(true);
+      setWizardStep(1);
+    }
+  }, [location.search]);
+  
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [wizardError, setWizardError] = useState<string | null>(null);
@@ -765,19 +774,57 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       setTempWaPhone(savedWaPhone);
     }
     
-    if (localStorage.getItem('cecm_academic_system')) setAcademicSystem(localStorage.getItem('cecm_academic_system') as any);
-    if (localStorage.getItem('cecm_academic_period')) setAcademicPeriod(Number(localStorage.getItem('cecm_academic_period')));
-    if (localStorage.getItem('cecm_academic_start')) setAcademicStartDate(localStorage.getItem('cecm_academic_start') || '');
-    if (localStorage.getItem('cecm_academic_end')) setAcademicEndDate(localStorage.getItem('cecm_academic_end') || '');
+    const sys = localStorage.getItem('cecm_academic_system') as any || 'Bimestral';
+    if (localStorage.getItem('cecm_academic_system')) setAcademicSystem(sys);
     
+    let currentPeriod = Number(localStorage.getItem('cecm_academic_period')) || 1;
+    let currentStart = localStorage.getItem('cecm_academic_start') || '';
+    let currentEnd = localStorage.getItem('cecm_academic_end') || '';
+
     const savedAcademicDates = localStorage.getItem('cecm_academic_dates');
     if (savedAcademicDates) {
       try {
-        setAcademicDates(JSON.parse(savedAcademicDates));
+        const parsedDates = JSON.parse(savedAcademicDates);
+        setAcademicDates(parsedDates);
+
+        // Auto-detect current period based on dates
+        const today = new Date();
+        const numPeriods = sys === 'Bimestral' ? 4 : 3;
+        
+        for (let p = 1; p <= numPeriods; p++) {
+          const key = `${sys}-${p}`;
+          const dates = parsedDates[key];
+          if (dates && dates.start && dates.end) {
+            const parseStr = (s: string) => {
+              const parts = s.split('/');
+              if (parts.length !== 2) return null;
+              return new Date(today.getFullYear(), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            };
+            const start = parseStr(dates.start);
+            const end = parseStr(dates.end);
+            
+            if (start && end) {
+              if (end < start) end.setFullYear(end.getFullYear() + 1);
+              start.setHours(0,0,0,0);
+              end.setHours(23,59,59,999);
+              
+              if (today >= start && today <= end) {
+                currentPeriod = p;
+                currentStart = dates.start;
+                currentEnd = dates.end;
+                break;
+              }
+            }
+          }
+        }
       } catch (e) {
         console.error("Failed to parse academic dates", e);
       }
     }
+    
+    setAcademicPeriod(currentPeriod);
+    setAcademicStartDate(currentStart);
+    setAcademicEndDate(currentEnd);
 
     const savedVersion = localStorage.getItem('cecm_version');
     if (savedVersion) {
@@ -977,6 +1024,11 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         setVersion(74);
       } else {
         setVersion(74);
+      }
+
+      const savedSubs = localStorage.getItem('cecm_substitutions');
+      if (savedSubs) {
+        setSubstitutions(JSON.parse(savedSubs));
       }
 
       if (savedTurmas) {
@@ -1226,8 +1278,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       timeRangesNoite,
       enableNoite,
       enableNoiteAsynchronous,
+      academicSystem,
+      academicDates,
       exportDate: new Date().toISOString(),
-      appName: "CECM-Scheduler"
+      appName: "GE-Scheduler"
     };
     
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'text/plain' });
@@ -1401,7 +1455,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             localStorage.setItem('cecm_substitutions', JSON.stringify(data.substitutions || []));
 
             setLogoUrl(data.logoUrl || '');
-            setSchoolName(data.schoolName || 'CECM GREGÓRIO SZEREMETA');
+            setSchoolName(data.schoolName || 'CE LUCAS LENIAR EF.M.P.');
             
             if (data.timeRangesManha) setTimeRangesManha(data.timeRangesManha);
             if (data.timeRangesTarde) setTimeRangesTarde(data.timeRangesTarde);
@@ -1414,6 +1468,45 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             if (data.enableNoiteAsynchronous !== undefined) {
               setEnableNoiteAsynchronous(data.enableNoiteAsynchronous);
               localStorage.setItem('enable_noite_asynchronous', data.enableNoiteAsynchronous ? 'true' : 'false');
+            }
+
+            if (data.academicSystem) {
+              setAcademicSystem(data.academicSystem);
+              localStorage.setItem('cecm_academic_system', data.academicSystem);
+            }
+            if (data.academicDates) {
+              setAcademicDates(data.academicDates);
+              localStorage.setItem('cecm_academic_dates', JSON.stringify(data.academicDates));
+              
+              // auto detect period
+              const sys = data.academicSystem || 'Bimestral';
+              const today = new Date();
+              const numPeriods = sys === 'Bimestral' ? 4 : 3;
+              for (let p = 1; p <= numPeriods; p++) {
+                const key = `${sys}-${p}`;
+                const dates = data.academicDates[key];
+                if (dates && dates.start && dates.end) {
+                  const parts = dates.start.split('/');
+                  if (parts.length === 2) {
+                    const start = new Date(today.getFullYear(), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    const endParts = dates.end.split('/');
+                    const end = new Date(today.getFullYear(), parseInt(endParts[1]) - 1, parseInt(endParts[0]));
+                    if (end < start) end.setFullYear(end.getFullYear() + 1);
+                    start.setHours(0,0,0,0);
+                    end.setHours(23,59,59,999);
+                    
+                    if (today >= start && today <= end) {
+                      setAcademicPeriod(p);
+                      setAcademicStartDate(dates.start);
+                      setAcademicEndDate(dates.end);
+                      localStorage.setItem('cecm_academic_period', p.toString());
+                      localStorage.setItem('cecm_academic_start', dates.start);
+                      localStorage.setItem('cecm_academic_end', dates.end);
+                      break;
+                    }
+                  }
+                }
+              }
             }
 
             setVersion(74);
@@ -1553,7 +1646,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         localStorage.setItem('cecm_substitutions', JSON.stringify(data.substitutions || []));
 
         setLogoUrl(data.logoUrl || '');
-        setSchoolName(data.schoolName || 'CECM GREGÓRIO SZEREMETA');
+        setSchoolName(data.schoolName || 'CE LUCAS LENIAR EF.M.P.');
         
         if (data.timeRangesManha) setTimeRangesManha(data.timeRangesManha);
         if (data.timeRangesTarde) setTimeRangesTarde(data.timeRangesTarde);
@@ -1568,6 +1661,43 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
           localStorage.setItem('enable_noite_asynchronous', data.enableNoiteAsynchronous ? 'true' : 'false');
         }
 
+        if (data.academicSystem) {
+          setAcademicSystem(data.academicSystem);
+          localStorage.setItem('cecm_academic_system', data.academicSystem);
+        }
+        if (data.academicDates) {
+          setAcademicDates(data.academicDates);
+          localStorage.setItem('cecm_academic_dates', JSON.stringify(data.academicDates));
+          
+          const sys = data.academicSystem || 'Bimestral';
+          const today = new Date();
+          const numPeriods = sys === 'Bimestral' ? 4 : 3;
+          for (let p = 1; p <= numPeriods; p++) {
+            const key = `${sys}-${p}`;
+            const dates = data.academicDates[key];
+            if (dates && dates.start && dates.end) {
+              const parts = dates.start.split('/');
+              if (parts.length === 2) {
+                const start = new Date(today.getFullYear(), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                const endParts = dates.end.split('/');
+                const end = new Date(today.getFullYear(), parseInt(endParts[1]) - 1, parseInt(endParts[0]));
+                if (end < start) end.setFullYear(end.getFullYear() + 1);
+                start.setHours(0,0,0,0);
+                end.setHours(23,59,59,999);
+                if (today >= start && today <= end) {
+                  setAcademicPeriod(p);
+                  setAcademicStartDate(dates.start);
+                  setAcademicEndDate(dates.end);
+                  localStorage.setItem('cecm_academic_period', p.toString());
+                  localStorage.setItem('cecm_academic_start', dates.start);
+                  localStorage.setItem('cecm_academic_end', dates.end);
+                  break;
+                }
+              }
+            }
+          }
+        }
+
         setVersion(74);
         
         if (importedTurmas.length > 0) {
@@ -1580,7 +1710,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
       setConfirmConfig({
         title: 'Carregar Carga 100% Completa',
-        message: 'ATENÇÃO: Deseja carregar a carga horária 100% calibrada do colégio CECM GREGÓRIO SZEREMETA? Isso substituirá seus dados locais atuais.',
+        message: 'ATENÇÃO: Deseja carregar a carga horária 100% calibrada? Isso substituirá seus dados locais atuais.',
         confirmText: 'Carregar Grade Completa',
         cancelText: 'Cancelar',
         onConfirm: proceedWithHealedImport
@@ -3772,7 +3902,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       printWindow.document.write(`
         <html>
           <head>
-            <title>${title} - CECM</title>
+            <title>${title} - ${schoolName || 'Gestão Escolar'}</title>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
             <style>
               @page { size: A4 landscape; margin: 4mm; }
@@ -4070,7 +4200,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       printWindow.document.write(`
         <html>
           <head>
-            <title>Quadro de Horários - CECM</title>
+            <title>Quadro de Horários - ${schoolName || 'Gestão Escolar'}</title>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
             <style>
               @page { 
@@ -4258,7 +4388,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       printWindow.document.write(`
         <html>
           <head>
-            <title>${title} - CECM</title>
+            <title>${title} - ${schoolName || 'Gestão Escolar'}</title>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
             <style>
               @page { size: A4 portrait; margin: 4mm; }
@@ -4451,7 +4581,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       printWindow.document.write(`
         <html>
           <head>
-            <title>Impresso Combinado - CECM</title>
+            <title>Impresso Combinado - ${schoolName || 'Gestão Escolar'}</title>
             <style>
               @page { size: A4 landscape; margin: 4mm; }
               body { 
@@ -4568,7 +4698,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       return;
     }
 
-    const schoolNameText = schoolName || "CECM GREGÓRIO SZEREMETA";
+    const schoolNameText = schoolName || "CE LUCAS LENIAR EF.M.P.";
     const dateStr = new Date().toLocaleString('pt-BR');
     const rateSuccess = Math.round((autoGenResults.placedCount / (autoGenResults.scannedCount || 1)) * 100);
 
@@ -4631,7 +4761,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       printWindow.document.write(`
         <html>
           <head>
-            <title>Relatório de Pendências - CECM</title>
+            <title>Relatório de Pendências - ${schoolName || 'Gestão Escolar'}</title>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
             <style>
               @page { size: A4 portrait; margin: 4mm; }
@@ -4769,7 +4899,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     // Sorting items by Class name first, then subject
     pendingItems.sort((a,b) => a.turma.localeCompare(b.turma, undefined, {numeric: true}) || a.subject.localeCompare(b.subject));
 
-    const schoolNameText = schoolName || "CECM GREGÓRIO SZEREMETA";
+    const schoolNameText = schoolName || "CE LUCAS LENIAR EF.M.P.";
     const dateStr = new Date().toLocaleString('pt-BR');
     const academicStr = `Período: ${academicPeriod}º ${academicSystem} ${academicStartDate ? `(${academicStartDate} a ${academicEndDate})` : ''}`;
 
@@ -4968,7 +5098,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       printWindow.document.write(`
         <html>
           <head>
-            <title>Relatório de Aulas Faltantes - CECM</title>
+            <title>Relatório de Aulas Faltantes - ${schoolName || 'Gestão Escolar'}</title>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
             <style>
               @page { size: A4 portrait; margin: 4mm; }
@@ -5039,7 +5169,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
           <div className="flex items-center gap-1 shrink-0">
             <div className="w-[3px] h-[14px] bg-indigo-650 rounded-full shrink-0"></div>
             <div className="flex flex-col">
-              <span className="text-[9.5px] font-black text-slate-900 leading-none uppercase tracking-tighter">CECM</span>
+              <span className="text-[9.5px] font-black text-slate-900 leading-none uppercase tracking-tighter">GE</span>
               <span className="text-[7px] font-extrabold text-slate-400 uppercase leading-none mt-0.5">V{version}</span>
             </div>
           </div>
@@ -5345,9 +5475,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   <button 
                     onClick={() => { handleLoadHealedBackup(); setIsMobileMenuOpen(false); }}
                     className="p-1 bg-amber-50 text-amber-800 hover:bg-amber-100 rounded border border-amber-200 flex items-center gap-0.5 font-bold text-[8.5px] uppercase"
-                    title="Demo Completa CECM"
+                    title="Demo Completa"
                   >
-                    <Sparkles className="w-3 h-3 text-amber-500 animate-pulse shrink-0" /> Demo CECM
+                    <Sparkles className="w-3 h-3 text-amber-500 animate-pulse shrink-0" /> Demo
                   </button>
                   <button 
                     onClick={() => { setIsWhatsAppModalOpen(true); setIsMobileMenuOpen(false); }}
@@ -5490,7 +5620,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
-                        const val = tempSchoolName.trim() || 'CECM GREGÓRIO SZEREMETA';
+                        const val = tempSchoolName.trim() || 'CE LUCAS LENIAR EF.M.P.';
                         setSchoolName(val);
                         window.dispatchEvent(new CustomEvent('cecm_school_name_changed', { detail: val }));
                         setShowSchoolInput(false);
@@ -5504,7 +5634,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   <div className="flex items-center gap-0.5 ml-1">
                     <button 
                       onClick={() => { 
-                        const val = tempSchoolName.trim() || 'CECM GREGÓRIO SZEREMETA';
+                        const val = tempSchoolName.trim() || 'CE LUCAS LENIAR EF.M.P.';
                         setSchoolName(val);
                         window.dispatchEvent(new CustomEvent('cecm_school_name_changed', { detail: val }));
                         setShowSchoolInput(false); 
@@ -5759,7 +5889,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 <button 
                   onClick={handleLoadHealedBackup}
                   className="p-1 bg-amber-50 hover:bg-amber-100 rounded text-amber-700 hover:text-amber-800 transition-all flex items-center justify-center cursor-pointer border border-amber-200/40"
-                  title="Carregar Carga 100% Completa CECM"
+                  title="Carregar Carga 100% Completa"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
                 </button>
@@ -5814,12 +5944,12 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             </div>
             
             <div className="flex-1 overflow-auto custom-scrollbar">
-              <table className="w-full border-collapse border-spacing-0">
+              <table className="border-collapse border-spacing-0 table-fixed w-full min-w-max">
                 <thead>
                   <tr className="bg-slate-100 border-b-2 border-slate-900 sticky top-0 z-20">
-                    <th className="bg-slate-100 sticky left-0 z-40 border-r-2 border-slate-900 w-10 min-w-[40px] max-w-[40px]"></th>
+                    <th className="bg-slate-100 sticky left-0 z-40 border-r-2 border-slate-900 w-12 min-w-[48px] max-w-[48px]"></th>
                     {viewMode === 'turmas' ? displayedTurmas.map(t => (
-                      <th key={t.id} className="p-0 border-r border-slate-300 text-[10px] font-black uppercase tracking-tight text-slate-900 min-w-[80px] bg-slate-100">
+                      <th key={t.id} className="p-0 border-r border-slate-300 text-[10px] font-black uppercase tracking-tight text-slate-900 min-w-[100px] w-[140px] bg-slate-100">
                         <div className="flex items-center justify-between px-2 py-3 group">
                           <span className="truncate">{t.name}</span>
                           <button 
@@ -5840,13 +5970,13 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         </div>
                       </th>
                     )) : turmas.filter(t => t.isRoom).map(t => (
-                      <th key={t.id} className="p-0 border-r border-slate-300 text-[10px] font-black uppercase tracking-tight text-slate-900 min-w-[100px] bg-indigo-50">
+                      <th key={t.id} className="p-0 border-r border-slate-300 text-[10px] font-black uppercase tracking-tight text-slate-900 min-w-[100px] w-[140px] bg-indigo-50">
                         <div className="flex items-center justify-between px-2 py-3 group">
                           <span className="truncate text-indigo-900">{t.name}</span>
                         </div>
                       </th>
                     ))}
-                    <th className="p-3 bg-slate-200 text-[9px] font-black uppercase tracking-widest text-slate-900 sticky right-0 z-20 shadow-[-4px_0_10px_rgba(0,0,0,0.05)] w-28">
+                    <th className="p-3 bg-slate-200 text-[9px] font-black uppercase tracking-widest text-slate-900 sticky right-0 z-20 shadow-[-4px_0_10px_rgba(0,0,0,0.05)] w-28 min-w-[112px] max-w-[112px]">
                       Horário
                     </th>
                   </tr>
@@ -5871,7 +6001,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                             <tr className={`border-b border-slate-300 hover:bg-slate-50 transition-colors h-14 ${pIndex === lastPeriodIdx ? 'border-b-[3px] border-slate-900' : ''}`}>
                               {/* Day Column (Sticky Left) */}
                               {pIndex === 0 && (
-                                <td rowSpan={totalRows} className={`${day.screenBg} text-white p-0 w-10 min-w-[40px] max-w-[40px] border-r-2 border-slate-900 sticky left-0 z-40 shadow-[2px_0_10px_rgba(0,0,0,0.1)]`}>
+                                <td rowSpan={totalRows} className={`${day.screenBg} text-white p-0 w-12 min-w-[48px] max-w-[48px] border-r-2 border-slate-900 sticky left-0 z-40 shadow-[2px_0_10px_rgba(0,0,0,0.1)]`}>
                                   <div className="flex items-center justify-center h-full w-full">
                                     <span className="text-[10px] font-black uppercase [writing-mode:vertical-lr] rotate-180 text-center tracking-widest whitespace-nowrap">
                                       {day.label}
@@ -5905,19 +6035,38 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                 const subject = subjects.find(s => s.id === slot?.subjectId);
                                 const associatedTurma = turmas.find(t => t.id === slot?.associatedTurmaId);
                                 const conflicts = getConflicts(day.id, actualPeriod, slot?.teacherId || '', turma.id);
- 
+                                
+                                const activeSub = slot && substitutions.find(sub => {
+                                  if (slot.teacherId === sub.absentTeacherId && sub.date) {
+                                    const subDay = new Date(sub.date + 'T12:00:00').getDay();
+                                    const map: Record<number, string> = { 1: 'seg', 2: 'ter', 3: 'qua', 4: 'qui', 5: 'sex' };
+                                    if (map[subDay] === day.id) {
+                                      if (sub.periods && sub.periods.length > 0) {
+                                        return sub.periods.includes(actualPeriod);
+                                      }
+                                      return true; // Match if no specific periods defined
+                                    }
+                                  }
+                                  return false;
+                                });
+                                const subTeacher = activeSub && activeSub.substituteTeacherId !== 'none'
+                                  ? teachers.find(t => t.id === activeSub.substituteTeacherId)
+                                  : null;
+
                                 const cellBg = conflicts.length > 0 
                                   ? 'bg-red-50 hover:bg-red-100 border border-red-300 shadow-[inset_0_0_0_1px_rgba(239,68,68,0.2)]' 
                                   : slot 
                                     ? viewMode === 'rooms' 
                                       ? 'bg-indigo-50 hover:bg-indigo-100 border border-indigo-300' 
+                                      : activeSub 
+                                        ? 'bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.2)]'
+                                        : isGrayDay 
+                                          ? 'bg-[#d5dee8] hover:bg-[#c1cbd6] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.15)] border border-slate-400'
+                                          : 'bg-white hover:bg-slate-50 shadow-[0_1.5px_3px_rgba(0,0,0,0.04),_inset_0_0_0_1px_rgba(0,0,0,0.02)] border border-slate-300'
                                       : isGrayDay 
-                                        ? 'bg-[#d5dee8] hover:bg-[#c1cbd6] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.15)] border border-slate-400'
-                                        : 'bg-white hover:bg-slate-50 shadow-[0_1.5px_3px_rgba(0,0,0,0.04),_inset_0_0_0_1px_rgba(0,0,0,0.02)] border border-slate-300'
-                                    : isGrayDay 
-                                      ? 'bg-[#d5dee8]/80 hover:bg-[#d5dee8]'
-                                      : 'bg-white hover:bg-slate-50/55';
- 
+                                        ? 'bg-[#d5dee8]/80 hover:bg-[#d5dee8]'
+                                        : 'bg-white hover:bg-slate-50/55';
+
                                 return (
                                   <td 
                                     key={turma.id}
@@ -5939,13 +6088,24 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                         onDragStart={(e) => handleDragStart(e, turma.id, slotId)}
                                         className="flex flex-col items-center justify-center text-center overflow-hidden cursor-move w-full h-full select-none"
                                       >
-                                        <span className={`text-[10px] font-black uppercase leading-[1.1] mb-0.5 ${errorCell?.turmaId === turma.id && errorCell?.slotId === slotId ? 'text-white' : conflicts.length > 0 ? 'text-red-600' : viewMode === 'rooms' ? 'text-indigo-900' : isGrayDay ? 'text-[#000000]' : 'text-slate-800'}`}>
+                                        <span className={`text-[10px] font-black uppercase leading-[1.1] mb-0.5 ${errorCell?.turmaId === turma.id && errorCell?.slotId === slotId ? 'text-white' : conflicts.length > 0 ? 'text-red-600' : viewMode === 'rooms' ? 'text-indigo-900' : activeSub ? 'text-emerald-800' : isGrayDay ? 'text-[#000000]' : 'text-slate-800'}`}>
                                           {viewMode === 'rooms' ? associatedTurma?.name || 'N/A' : subject?.name}
                                         </span>
-                                        <span className={`text-[8px] font-bold uppercase truncate w-full ${errorCell?.turmaId === turma.id && errorCell?.slotId === slotId ? 'text-red-100' : viewMode === 'rooms' ? 'text-indigo-400' : isGrayDay ? 'text-[#2f2f2f]' : 'text-slate-400'}`}>
-                                          {teacher?.name} {viewMode === 'rooms' && subject ? `• ${subject.name}` : ''}
-                                        </span>
-                                        {conflicts.length > 0 && !(errorCell?.turmaId === turma.id && errorCell?.slotId === slotId) && (
+                                        <div className={`text-[8px] font-bold uppercase w-full flex flex-col items-center justify-center min-w-0 ${errorCell?.turmaId === turma.id && errorCell?.slotId === slotId ? 'text-red-100' : viewMode === 'rooms' ? 'text-indigo-400' : isGrayDay ? 'text-[#2f2f2f]' : 'text-slate-500'}`}>
+                                          {activeSub ? (
+                                            <>
+                                              <span className="line-through opacity-70 truncate w-full px-0.5 leading-[1]">{teacher?.name}</span>
+                                              <span className="text-emerald-700 px-1 py-[2px] bg-emerald-100/80 rounded truncate max-w-[95%] text-[7px] mt-0.5 font-black border border-emerald-200 shadow-sm leading-none">
+                                                {subTeacher?.name || 'PENDENTE'}
+                                              </span>
+                                            </>
+                                          ) : (
+                                            <span className="truncate w-full px-0.5">
+                                              {teacher?.name} {viewMode === 'rooms' && subject ? `• ${subject.name}` : ''}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {conflicts.length > 0 && !(errorCell?.turmaId === turma.id && errorCell?.slotId === slotId) && !activeSub && (
                                           <div className="absolute top-0.5 right-0.5">
                                             <AlertCircle className="w-2.5 h-2.5 text-red-500 fill-white" />
                                           </div>
@@ -5959,7 +6119,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                   </td>
                                 );
                               })}
-                              <td className={`p-1.5 border-l border-slate-400 sticky right-0 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)] w-28 ${isGrayDay ? 'bg-[#d5dee8]' : 'bg-slate-50'}`}>
+                              <td className={`p-1.5 border-l border-slate-400 sticky right-0 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)] w-28 min-w-[112px] max-w-[112px] ${isGrayDay ? 'bg-[#d5dee8]' : 'bg-slate-50'}`}>
                                 <div className="flex flex-col items-center justify-center gap-0.5">
                                   <span className={`text-[9px] font-black uppercase shrink-0 ${isGrayDay ? 'text-[#000000]' : (importShift === 'noite' && enableNoiteAsynchronous && pIndex === 5) ? 'text-violet-650' : importShift === 'noite' ? 'text-indigo-600' : importShift === 'manha' ? 'text-blue-600' : 'text-red-500'}`}>
                                     {importShift === 'noite' && enableNoiteAsynchronous && pIndex === 5 ? 'ASSÍNCRONA' : `${pIndex + 1}ª aula`}
@@ -5977,7 +6137,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                     <span className="text-[7.5px] md:text-[8px] font-extrabold text-slate-700 uppercase tracking-widest">Intervalo</span>
                                   </td>
                                 ))}
-                                <td className={`p-0 sticky right-0 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)] border-l border-slate-350 ${isGrayDay ? 'bg-[#9cb0c5]' : 'bg-slate-200'}`}>
+                                <td className={`p-0 sticky right-0 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)] border-l border-slate-350 w-28 min-w-[112px] max-w-[112px] ${isGrayDay ? 'bg-[#9cb0c5]' : 'bg-slate-200'}`}>
                                   <div className="flex flex-col items-center justify-center p-0.5">
                                     <span className={`text-[7.5px] font-black uppercase leading-tight ${isGrayDay ? 'text-[#1a1a1a]' : 'text-slate-700'}`}>Intervalo</span>
                                     <span className={`text-[6.5px] font-bold leading-none ${isGrayDay ? 'text-[#000000]' : 'text-slate-600'}`}>{importShift === 'noite' ? '21h15 - 21h30' : importShift === 'manha' ? '10h - 10h20' : '15h30 - 15h50'}</span>
@@ -7119,34 +7279,63 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   </div>
                 </div>
 
-                <div className={`overflow-y-auto space-y-2 pr-2 custom-scrollbar ${isAlunosRoute ? 'flex-1 min-h-0' : 'max-h-60'}`}>
-                  {sortTurmasList(
-                    turmas.filter(t => {
-                      if (t.isRoom) return false;
-                      if (newTurmaShift === 'todas') return true;
-                      return t.shift === newTurmaShift;
-                    })
-                  ).map(turma => (
-                    <div key={turma.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-white border border-transparent hover:border-slate-100 transition-all group">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-black text-slate-800">{turma.name}</span>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase">
-                          {turma.shift === 'manha' ? 'MANHÃ' : turma.shift === 'tarde' ? 'TARDE' : turma.shift === 'noite' ? 'NOITE' : 'Período não definido'} • {turma.dailyClassCount || 6} AULAS/DIA
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button 
-                          onClick={() => startEditTurma(turma)} 
-                          className="p-2 text-slate-300 hover:text-blue-500 transition-colors"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => removeTurma(turma.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                <div className={`overflow-y-auto pr-2 custom-scrollbar ${isAlunosRoute ? 'flex-1 min-h-0' : 'max-h-60'}`}>
+                  {newTurmaShift === 'todas' ? (
+                    <div className={`grid grid-cols-1 ${enableNoite ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
+                      {['manha', 'tarde', ...(enableNoite ? ['noite'] : [])].map(shiftLabel => {
+                        const shiftTurmas = sortTurmasList(turmas.filter(t => !t.isRoom && t.shift === shiftLabel));
+                        return (
+                          <div key={shiftLabel} className="space-y-2">
+                            <h4 className="text-[10px] font-black uppercase text-slate-500 border-b border-slate-200 pb-2 mb-2 sticky top-0 bg-white z-10">
+                              {shiftLabel === 'manha' ? 'Manhã' : shiftLabel === 'tarde' ? 'Tarde' : 'Noite'}
+                            </h4>
+                            {shiftTurmas.map(turma => (
+                              <div key={turma.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-xl hover:bg-white border border-transparent hover:border-slate-200 transition-all group">
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-black text-slate-800">{turma.name}</span>
+                                  <span className="text-[9px] font-bold text-slate-400 uppercase">
+                                    {turma.dailyClassCount || 6} AULAS/DIA
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={() => startEditTurma(turma)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors">
+                                    <Pencil className="w-3 h-3" />
+                                  </button>
+                                  <button onClick={() => removeTurma(turma.id)} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                            {shiftTurmas.length === 0 && <p className="text-[10px] text-slate-400 italic">Nenhuma turma</p>}
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
+                  ) : (
+                    <div className="space-y-2">
+                      {sortTurmasList(
+                        turmas.filter(t => !t.isRoom && t.shift === newTurmaShift)
+                      ).map(turma => (
+                        <div key={turma.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-white border border-transparent hover:border-slate-100 transition-all group">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-black text-slate-800">{turma.name}</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">
+                              {turma.dailyClassCount || 6} AULAS/DIA
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => startEditTurma(turma)} className="p-2 text-slate-300 hover:text-blue-500 transition-colors">
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => removeTurma(turma.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -10098,7 +10287,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                               setSchoolName(val);
                               window.dispatchEvent(new CustomEvent('cecm_school_name_changed', { detail: val }));
                             }}
-                            placeholder="Nome do Colégio (Ex: CECM GREGÓRIO SZEREMETA)"
+                            placeholder="Nome do Colégio (Ex: CE LUCAS LENIAR EF.M.P.)"
                             className="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl px-3 py-2.5 outline-none transition-all font-sans"
                           />
                         </div>
