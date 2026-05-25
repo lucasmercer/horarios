@@ -101,6 +101,17 @@ export default function DashboardLayout() {
       }
     }
     localStorage.setItem('cecm_trimester_config', JSON.stringify(trimesterConfig));
+    localStorage.setItem('cecm_academic_system', configModalidade === 'Trimestre' ? 'Trimestral' : 'Bimestral');
+    localStorage.setItem('cecm_academic_period', configPeriodo);
+    
+    if (configStartDate) {
+      const [y, m, d] = configStartDate.split('-');
+      if (y && m && d) localStorage.setItem('cecm_academic_start', `${d}/${m}`);
+    }
+    if (configEndDate) {
+      const [y, m, d] = configEndDate.split('-');
+      if (y && m && d) localStorage.setItem('cecm_academic_end', `${d}/${m}`);
+    }
 
     window.dispatchEvent(new CustomEvent('cecm_school_name_changed', { detail: configSchoolName }));
 
