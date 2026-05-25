@@ -310,6 +310,21 @@ export default function ScheduleGenerator() {
   const isDisciplinasRoute = location.pathname === '/disciplinas';
   const isHorariosRoute = location.pathname === '/' || location.pathname === '/horarios' || (!isProfessoresRoute && !isAlunosRoute && !isDisciplinasRoute);
 
+  const formatTeacherName = (name: string | undefined): string => {
+    if (!name) return '';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0];
+    const first = parts[0];
+    const last = parts[parts.length - 1];
+    return `${first} ${last.charAt(0)}.`;
+  };
+
+  const formatSubjectName = (name: string | undefined, maxLength = 16): string => {
+    if (!name) return '';
+    if (name.length <= maxLength) return name;
+    return name.substring(0, maxLength) + '...';
+  };
+
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [turmas, setTurmas] = useState<Turma[]>([]);
@@ -3825,8 +3840,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       <td class="p-num-cell">${pName}</td>
                       <td class="p-time-cell">${time}</td>
                       <td class="slot-cell">
-                        ${subject ? `<div class="subj-name">${subject.name}</div>` : '-'}
-                        ${teacher ? `<div class="prof-name">${teacher.name}</div>` : ''}
+                        ${subject ? `<div class="subj-name">${formatSubjectName(subject.name, 16)}</div>` : '-'}
+                        ${teacher ? `<div class="prof-name">${formatTeacherName(teacher.name)}</div>` : ''}
                       </td>
                       ${asyncCellHtml}
                     </tr>
@@ -3917,9 +3932,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         return `
                           <td class="slot-cell">
                             ${teacher ? `
-                              <div class="teacher-name">${teacher.name}</div>
+                              <div class="teacher-name">${formatTeacherName(teacher.name)}</div>
                               <div class="extra-info">
-                                ${turma?.name || ''} ${subject ? `<span class="extra-info-subject">- ${subject.name}</span>` : ''}
+                                ${turma?.name || ''} ${subject ? `<span class="extra-info-subject">- ${formatSubjectName(subject.name, 10)}</span>` : ''}
                               </div>
                             ` : ''}
                           </td>
@@ -4218,8 +4233,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                            return `
                              <td class="slot-cell" style="${isPeriodOut ? 'background-color: #f1f5f9 !important;' : ''}">
                                ${isPeriodOut ? '<div style="font-size: 5pt; color: #94a3b8; font-weight: 700; text-align: center; max-width: 100%; white-space: normal;">Turma não possui 6ª Aula</div>' : `
-                                 ${subject ? `<div class="subj-name">${subject.name}</div>` : ''}
-                                 ${teacher ? `<div class="prof-name">${teacher.name}</div>` : ''}
+                                 ${subject ? `<div class="subj-name">${formatSubjectName(subject.name, 16)}</div>` : ''}
+                                 ${teacher ? `<div class="prof-name">${formatTeacherName(teacher.name)}</div>` : ''}
                                `}
                              </td>
                            `;
@@ -4605,8 +4620,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       const asyncSubject = subjects.find(s => s.id === asyncSlot.subjectId);
                       asyncCellHtml = `
                         <td style="font-size: 6.2pt; border: 0.5pt solid black; padding: 1px 3px; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-                          <span style="font-weight: 850; text-transform: uppercase;">${asyncSubject ? asyncSubject.name : '-'}</span>
-                          ${asyncTeacher ? `<span style="font-size: 5.5pt; font-weight: 500; display: block; color: #334155;">${asyncTeacher.name}</span>` : ''}
+                          <span style="font-weight: 850; text-transform: uppercase;">${asyncSubject ? formatSubjectName(asyncSubject.name, 14) : '-'}</span>
+                          ${asyncTeacher ? `<span style="font-size: 5.5pt; font-weight: 500; display: block; color: #334155;">${formatTeacherName(asyncTeacher.name)}</span>` : ''}
                         </td>
                       `;
                     } else {
@@ -4624,8 +4639,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       <td class="p-num-cell-small" style="font-size: 6pt; border: 0.5pt solid black; padding: 1px 2px; text-align: center; font-weight: 800; color: #1d4ed8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${pName}</td>
                       <td class="p-time-cell-small" style="font-size: 5.3pt; border: 0.5pt solid black; padding: 1px 2px; text-align: center; color: #475569 !important; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${time}</td>
                       <td style="font-size: 6.2pt; border: 0.5pt solid black; padding: 1px 3px; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-                        <span style="font-weight: 850; text-transform: uppercase;">${subject ? subject.name : '-'}</span>
-                        ${teacher ? `<span style="font-size: 5.5pt; font-weight: 500; display: block; color: #334155;">${teacher.name}</span>` : ''}
+                        <span style="font-weight: 850; text-transform: uppercase;">${subject ? formatSubjectName(subject.name, 14) : '-'}</span>
+                        ${teacher ? `<span style="font-size: 5.5pt; font-weight: 500; display: block; color: #334155;">${formatTeacherName(teacher.name)}</span>` : ''}
                       </td>
                       ${asyncCellHtml}
                     </tr>
@@ -6156,20 +6171,20 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                         onDragStart={(e) => handleDragStart(e, turma.id, slotId)}
                                         className="flex flex-col items-center justify-center text-center overflow-hidden cursor-move w-full h-full select-none"
                                       >
-                                        <span className={`text-[10px] font-black uppercase leading-[1.1] mb-0.5 ${errorCell?.turmaId === turma.id && errorCell?.slotId === slotId ? 'text-white' : conflicts.length > 0 ? 'text-red-600' : viewMode === 'rooms' ? 'text-indigo-900' : activeSub ? 'text-emerald-800' : isGrayDay ? 'text-[#000000]' : 'text-slate-800'}`}>
-                                          {viewMode === 'rooms' ? associatedTurma?.name || 'N/A' : subject?.name}
+                                        <span className={`text-[10px] font-black uppercase leading-[1.1] mb-0.5 truncate w-full px-1 ${errorCell?.turmaId === turma.id && errorCell?.slotId === slotId ? 'text-white' : conflicts.length > 0 ? 'text-red-600' : viewMode === 'rooms' ? 'text-indigo-900' : activeSub ? 'text-emerald-800' : isGrayDay ? 'text-[#000000]' : 'text-slate-800'}`}>
+                                          {viewMode === 'rooms' ? formatSubjectName(associatedTurma?.name) || 'N/A' : formatSubjectName(subject?.name)}
                                         </span>
                                         <div className={`text-[8px] font-bold uppercase w-full flex flex-col items-center justify-center min-w-0 ${errorCell?.turmaId === turma.id && errorCell?.slotId === slotId ? 'text-red-100' : viewMode === 'rooms' ? 'text-indigo-400' : isGrayDay ? 'text-[#2f2f2f]' : 'text-slate-500'}`}>
                                           {activeSub ? (
                                             <>
-                                              <span className="line-through opacity-70 truncate w-full px-0.5 leading-[1]">{teacher?.name}</span>
+                                              <span className="line-through opacity-70 truncate w-full px-0.5 leading-[1]">{formatTeacherName(teacher?.name)}</span>
                                               <span className="text-emerald-700 px-1 py-[2px] bg-emerald-100/80 rounded truncate max-w-[95%] text-[7px] mt-0.5 font-black border border-emerald-200 shadow-sm leading-none">
-                                                {subTeacher?.name || 'PENDENTE'}
+                                                {formatTeacherName(subTeacher?.name) || 'PENDENTE'}
                                               </span>
                                             </>
                                           ) : (
                                             <span className="truncate w-full px-0.5">
-                                              {teacher?.name} {viewMode === 'rooms' && subject ? `• ${subject.name}` : ''}
+                                              {formatTeacherName(teacher?.name)} {viewMode === 'rooms' && subject ? `• ${formatSubjectName(subject.name, 10)}` : ''}
                                             </span>
                                           )}
                                         </div>
