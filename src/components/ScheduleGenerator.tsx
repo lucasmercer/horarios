@@ -474,6 +474,7 @@ export default function ScheduleGenerator() {
   const [allocateConsecutive, setAllocateConsecutive] = useState(false);
   const [manuallyToggledConsecutive, setManuallyToggledConsecutive] = useState(false);
   const [slotError, setSlotError] = useState<string | null>(null);
+  const [pendingLabConflict, setPendingLabConflict] = useState<{ roomId: string, consecSlot: string | null } | null>(null);
   const [editingTeacherId, setEditingTeacherId] = useState<string | null>(null);
 
   const [isSaved, setIsSaved] = useState(false);
@@ -3043,12 +3044,31 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     targetTurmaId: string,
     targetSlotId: string
   ): { isValid: boolean; error?: string } => {
+    // 0. Ensure same turma
+    if (sourceTurmaId !== targetTurmaId) {
+      return { isValid: false, error: "Para evitar erros nos cálculos de carga horária, não é permitido arrastar e mover aulas entre turmas diferentes. A reorganização manual só é permitida dentro da própria turma." };
+    }
+
     // 1. Retrieve slots
     const sourceSlotData = schedules[sourceTurmaId]?.[sourceSlotId];
     if (!sourceSlotData) {
       return { isValid: false, error: "Nenhuma aula no horário de origem." };
     }
     const targetSlotData = schedules[targetTurmaId]?.[targetSlotId];
+
+    // Check room conflicts for drag-and-drop
+    if (sourceSlotData.associatedRoomId) {
+       const roomSched = schedules[sourceSlotData.associatedRoomId] || {};
+       if (roomSched[targetSlotId] && roomSched[targetSlotId].associatedTurmaId !== targetTurmaId) {
+          return { isValid: false, error: "O laboratório/sala especial está ocupado no horário de destino por outra turma." };
+       }
+    }
+    if (targetSlotData && targetSlotData.associatedRoomId) {
+       const roomSched = schedules[targetSlotData.associatedRoomId] || {};
+       if (roomSched[sourceSlotId] && roomSched[sourceSlotId].associatedTurmaId !== sourceTurmaId) {
+          return { isValid: false, error: "O laboratório/sala especial está ocupado no horário de origem por outra turma." };
+       }
+    }
 
     // 2. Extract day & period
     const [sourceDay, sourcePeriodStr] = sourceSlotId.split('-');
@@ -3221,15 +3241,6 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       if (!sourceSlotData) return;
       const targetSlotData = updatedSchedules[targetTurmaId]?.[targetSlotId];
 
-      if (sourceSlotData.associatedRoomId || sourceSlotData.associatedTurmaId || 
-          targetSlotData?.associatedRoomId || targetSlotData?.associatedTurmaId) {
-        setErrorCell({ turmaId: targetTurmaId, slotId: targetSlotId });
-        setDragErrorMsg("Para mover aulas de laboratórios/salas especiais, clique na célula e altere (ou exluir e crie novamente) para evitar corromper a grade espelhada.");
-        setTimeout(() => setErrorCell(null), 2500);
-        setTimeout(() => setDragErrorMsg(null), 6000);
-        return;
-      }
-
       if (!updatedSchedules[targetTurmaId]) {
         updatedSchedules[targetTurmaId] = {};
       }
@@ -3237,14 +3248,48 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         updatedSchedules[sourceTurmaId] = {};
       }
 
+      // Initialize room schedules if needed
+      const sourceRoomId = sourceSlotData.associatedRoomId;
+      const targetRoomId = targetSlotData?.associatedRoomId;
+      if (sourceRoomId && !updatedSchedules[sourceRoomId]) updatedSchedules[sourceRoomId] = {};
+      if (targetRoomId && !updatedSchedules[targetRoomId]) updatedSchedules[targetRoomId] = {};
+
       if (targetSlotData) {
         // Swap
         updatedSchedules[targetTurmaId][targetSlotId] = sourceSlotData;
         updatedSchedules[sourceTurmaId][sourceSlotId] = targetSlotData;
+
+        // Swap room mirrors
+        if (sourceRoomId) {
+          updatedSchedules[sourceRoomId][targetSlotId] = {
+            ...sourceSlotData,
+            associatedTurmaId: targetTurmaId
+          };
+          delete updatedSchedules[sourceRoomId][sourceSlotId];
+        }
+        if (targetRoomId) {
+           updatedSchedules[targetRoomId][sourceSlotId] = {
+             ...targetSlotData,
+             associatedTurmaId: sourceTurmaId
+           };
+           // If target room is not the same as source room, or source didn't occupy the slot we just wrote to
+           if (targetRoomId !== sourceRoomId) {
+             delete updatedSchedules[targetRoomId][targetSlotId];
+           }
+        }
       } else {
         // Move
         updatedSchedules[targetTurmaId][targetSlotId] = sourceSlotData;
         delete updatedSchedules[sourceTurmaId][sourceSlotId];
+
+        // Move room mirror
+        if (sourceRoomId) {
+          updatedSchedules[sourceRoomId][targetSlotId] = {
+            ...sourceSlotData,
+            associatedTurmaId: targetTurmaId
+          };
+          delete updatedSchedules[sourceRoomId][sourceSlotId];
+        }
       }
 
       setSchedules(updatedSchedules);
@@ -3265,6 +3310,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     setTempAssociatedTurmaId(currentSchedule[slotId]?.associatedTurmaId || '');
     setTempAssociatedRoomId(currentSchedule[slotId]?.associatedRoomId || '');
     setSlotError(null);
+    setPendingLabConflict(null);
     setShowAllSubjectsInRoom(false); // Reset when opening modal
     
     // Auto-detect if selected teacher has preferDoubleClasses
@@ -3273,7 +3319,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     setManuallyToggledConsecutive(false);
   };
 
-  const saveSlot = () => {
+  const saveSlot = (forceLabOverride = false) => {
     if (!selectedSlot || !selectedTurmaId) return;
     
     // Validar se o período excede o limite diário de aulas da turma
@@ -3298,7 +3344,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     
     // Helper to safely remove a single slot and its linked mirrors
     const removeSlotSafely = (slotId: string, currentData: ScheduleSlot, contextTurmaId: string) => {
-      // Is this a room assignment with an associated turma?
+      // ...
       if (currentData.associatedTurmaId) {
         if (nextSchedules[currentData.associatedTurmaId]) {
           const assocSched = { ...nextSchedules[currentData.associatedTurmaId] };
@@ -3308,7 +3354,6 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
           }
         }
       }
-      // Is this a turma assignment with an associated room?
       if (currentData.associatedRoomId) {
         if (nextSchedules[currentData.associatedRoomId]) {
           const assocSched = { ...nextSchedules[currentData.associatedRoomId] };
@@ -3325,6 +3370,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     const [day, periodStr] = selectedSlot.split('-');
     const period = parseInt(periodStr);
     let consecPeriod: number | null = null;
+    // ...
     if (period >= 1 && period <= 6) {
       consecPeriod = (period < 6) ? period + 1 : 5;
     } else if (period >= 7 && period <= 12) {
@@ -3337,8 +3383,6 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     if (!tempSubject) {
       if (selectedSlot && currentSchedule[selectedSlot]) {
         removeSlotSafely(selectedSlot, currentSchedule[selectedSlot], selectedTurmaId);
-        
-        // Also clear consecutive if checked
         if (allocateConsecutive && consecSlot && currentSchedule[consecSlot]) {
           removeSlotSafely(consecSlot, currentSchedule[consecSlot], selectedTurmaId);
         }
@@ -3353,66 +3397,71 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       setSlotError("Por favor, selecione um professor.");
       return;
     } else {
-      // Realtime teacher availability / conflict checks
+      // ... real teacher availability
       if (tempTeacher) {
         const teacher = teachers.find(t => t.id === tempTeacher);
         if (teacher && teacher.turmaIds && teacher.turmaIds.length > 0) {
           const targetTurmaId = viewMode === 'rooms' ? tempAssociatedTurmaId : selectedTurmaId;
           if (!teacher.turmaIds.includes(targetTurmaId)) {
-            const targetTurmaObj = turmas.find(t => t.id === targetTurmaId);
-            const turmaName = targetTurmaObj ? targetTurmaObj.name : targetTurmaId;
-            setSlotError(`Erro: O professor ${teacher.name} não leciona para a turma ${turmaName}.`);
-            return;
+             setSlotError(`Erro: O professor não leciona para esta turma.`);
+             return;
           }
         }
 
-        // Clicado
         const selectedConflicts = getConflicts(day, period, tempTeacher, selectedTurmaId);
         if (selectedConflicts.length > 0) {
           setSlotError(selectedConflicts.includes('INDISPONÍVEL')
             ? `Erro: O professor não está disponível no horário ${day}-${period}.`
-            : `Erro: O professor já está ocupado em outra turma no horário ${day}-${period} (${selectedConflicts.join(', ')}).`);
+            : `Erro: O professor já está ocupado em outra turma no horário ${day}-${period}.`);
           return;
         }
 
-        // Consecutivo/Geminado
         if (allocateConsecutive && consecSlot && consecPeriod) {
           const consecConflicts = getConflicts(day, consecPeriod, tempTeacher, selectedTurmaId);
           if (consecConflicts.length > 0) {
-            const labelHelper = getConsecutiveSlotLabel(selectedSlot)?.label || `${day}-${consecPeriod}`;
-            setSlotError(consecConflicts.includes('INDISPONÍVEL')
-              ? `Erro: O professor não está disponível no horário geminado ${labelHelper}.`
-              : `Erro: O professor já está ocupado em outra turma no horário geminado ${labelHelper} (${consecConflicts.join(', ')}).`);
+            setSlotError(`Erro: O professor já está ocupado em outra turma no horário geminado.`);
             return;
           }
         }
       }
 
-      // Validação de disponibilidade da Sala Especial (quando selecionada no quadro de turmas)
+      // Validação de disponibilidade da Sala Especial
       if (viewMode === 'turmas' && tempAssociatedRoomId) {
         const roomSchedule = schedules[tempAssociatedRoomId] || {};
+        const isConflict1 = roomSchedule[selectedSlot] && roomSchedule[selectedSlot]?.associatedTurmaId !== selectedTurmaId;
+        const isConflict2 = allocateConsecutive && consecSlot && roomSchedule[consecSlot] && roomSchedule[consecSlot]?.associatedTurmaId !== selectedTurmaId;
         
-        if (roomSchedule[selectedSlot] && roomSchedule[selectedSlot]?.associatedTurmaId !== selectedTurmaId) {
-          setSlotError(`Erro: A sala especial escolhida já está ocupada neste horário.`);
-          return;
-        }
-
-        if (allocateConsecutive && consecSlot && roomSchedule[consecSlot] && roomSchedule[consecSlot]?.associatedTurmaId !== selectedTurmaId) {
-          setSlotError(`Erro: A sala especial escolhida já está ocupada no próximo horário (Aula Dupla/Geminada).`);
-          return;
+        if (isConflict1 || isConflict2) {
+          if (!forceLabOverride) {
+            setPendingLabConflict({ roomId: tempAssociatedRoomId, consecSlot });
+            setSlotError(null);
+            return;
+          } else {
+            // Overriding! Clean up the other turmas that were using this lab in these slots
+            [selectedSlot, consecSlot].forEach((sId) => {
+              if (sId && roomSchedule[sId]) {
+                 const oldTurmaId = roomSchedule[sId].associatedTurmaId;
+                 if (oldTurmaId && oldTurmaId !== selectedTurmaId) {
+                    if (!nextSchedules[oldTurmaId]) nextSchedules[oldTurmaId] = {};
+                    if (nextSchedules[oldTurmaId][sId]) {
+                       // We don't delete their lesson, just remove their lab association
+                       nextSchedules[oldTurmaId][sId] = { ...nextSchedules[oldTurmaId][sId], associatedRoomId: undefined };
+                    }
+                 }
+              }
+            });
+            setPendingLabConflict(null);
+          }
         }
       }
 
       // Workload Validation
       const subject = subjects.find(s => s.id === tempSubject);
       if (subject) {
-        // Curriculum mapping validation
         const targetTurmaIdForValidation = viewMode === 'rooms' ? tempAssociatedTurmaId : selectedTurmaId;
         const workloads = getSubjectWorkloadsForTurma(subject, targetTurmaIdForValidation);
         if (workloads.workload === 0) {
-          const targetTurmaObj = turmas.find(t => t.id === targetTurmaIdForValidation);
-          const turmaName = targetTurmaObj ? targetTurmaObj.name : targetTurmaIdForValidation;
-          setSlotError(`Erro: A disciplina "${subject.name}" não faz parte da grade curricular da turma "${turmaName}".`);
+          setSlotError(`Erro: A disciplina não faz parte da grade curricular da turma.`);
           return;
         }
 
@@ -3431,7 +3480,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         if (allocateConsecutive && consecSlot && !isEditingSameConsec) extraNeeded += 1;
 
         if (usage.usage + extraNeeded > usage.total) {
-          setSlotError(`Limite TOTAL de carga horária atingido para ${subject.name} (Máximo ${usage.total} aulas semanais). Alocar esta aula ${allocateConsecutive ? 'como geminada ' : ''}ultrapassa o limite.`);
+          setSlotError(`Limite TOTAL de carga horária atingido para ${subject.name} (Máximo ${usage.total} aulas semanais).`);
           return;
         }
       }
@@ -5963,12 +6012,12 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             </div>
             
             <div className="flex-1 overflow-auto custom-scrollbar">
-              <table className="border-collapse border-spacing-0 table-fixed w-full min-w-max">
+              <table className="border-collapse border-spacing-0 table-fixed w-full">
                 <thead>
                   <tr className="bg-slate-100 border-b-2 border-slate-900 sticky top-0 z-20">
                     <th className="bg-slate-100 sticky left-0 z-40 border-r-2 border-slate-900 w-12 min-w-[48px] max-w-[48px]"></th>
                     {viewMode === 'turmas' ? displayedTurmas.map(t => (
-                      <th key={t.id} className="p-0 border-r border-slate-300 text-[10px] font-black uppercase tracking-tight text-slate-900 min-w-[100px] w-[140px] bg-slate-100">
+                      <th key={t.id} className="p-0 border-r border-slate-300 text-[10px] font-black uppercase tracking-tight text-slate-900 bg-slate-100 min-w-0">
                         <div className="flex items-center justify-between px-2 py-3 group">
                           <span className="truncate">{t.name}</span>
                           <button 
@@ -5989,7 +6038,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         </div>
                       </th>
                     )) : turmas.filter(t => t.isRoom).map(t => (
-                      <th key={t.id} className="p-0 border-r border-slate-300 text-[10px] font-black uppercase tracking-tight text-slate-900 min-w-[100px] w-[140px] bg-indigo-50">
+                      <th key={t.id} className="p-0 border-r border-slate-300 text-[10px] font-black uppercase tracking-tight text-slate-900 bg-indigo-50 min-w-0">
                         <div className="flex items-center justify-between px-2 py-3 group">
                           <span className="truncate text-indigo-900">{t.name}</span>
                         </div>
@@ -6254,7 +6303,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     </select>
                   </div>
                 )}
-                {viewMode === 'turmas' && tempSubject && subjects.find(s => s.id === tempSubject)?.roomIds && subjects.find(s => s.id === tempSubject)!.roomIds!.length > 0 && (
+                {viewMode === 'turmas' && tempSubject && subjects.find(s => s.id === tempSubject) && getCompatibleSpecialRooms(subjects.find(s => s.id === tempSubject)!, turmas).length > 0 && (
                   <div className="space-y-2 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
                     <label className="text-[10px] font-black text-indigo-800 uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3" /> Espelhar em Sala Especial?</label>
                     <p className="text-[10px] text-indigo-600/80 leading-relaxed mb-2 font-medium">Esta disciplina tem uso de sala(s) especial(is). Deseja registrar visualmente e ocupar este lab simultaneamente?</p>
@@ -6263,11 +6312,12 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       onChange={e => {
                         setTempAssociatedRoomId(e.target.value);
                         setSlotError(null);
+                        setPendingLabConflict(null);
                       }}
                       className="w-full px-4 py-3 bg-white border-2 border-indigo-100 rounded-xl text-xs font-bold text-indigo-900 focus:outline-none focus:border-indigo-500 transition-all shadow-sm"
                     >
                       <option value="">Não (Manter na sala regular)</option>
-                      {subjects.find(s => s.id === tempSubject)?.roomIds?.map(rid => {
+                      {getCompatibleSpecialRooms(subjects.find(s => s.id === tempSubject)!, turmas).map(rid => {
                         const room = turmas.find(t => t.id === rid);
                         if (!room) return null;
                         
@@ -6324,8 +6374,39 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       const sId = e.target.value;
                       setTempSubject(sId);
                       setSlotError(null);
+                      setPendingLabConflict(null);
                       if (viewMode === 'turmas') {
-                        setTempAssociatedRoomId(''); // Reset room when subject changes
+                        const subjectObj = subjects.find(s => s.id === sId);
+                        if (subjectObj) {
+                          const compatibleRooms = getCompatibleSpecialRooms(subjectObj, turmas);
+                          if (compatibleRooms.length > 0) {
+                            // Encontrar o primeiro laboratório que está LIVRE neste horário
+                            let freeRoomId = '';
+                            if (selectedSlot) {
+                              for (const rid of compatibleRooms) {
+                                const roomSched = schedules[rid] || {};
+                                // Checa aula simples e aula geminada (se ativada)
+                                const [day, period] = selectedSlot.split('-');
+                                const consecPeriod = parseInt(period) % 2 === 1 ? parseInt(period) + 1 : null;
+                                const consecSlot = consecPeriod ? `${day}-${consecPeriod}` : null;
+                                
+                                const isOccupied = roomSched[selectedSlot] && roomSched[selectedSlot].associatedTurmaId !== selectedTurmaId;
+                                const isConsecOccupied = allocateConsecutive && consecSlot && roomSched[consecSlot] && roomSched[consecSlot].associatedTurmaId !== selectedTurmaId;
+                                
+                                if (!isOccupied && !isConsecOccupied) {
+                                  freeRoomId = rid;
+                                  break; // Achou um livre, sai do loop
+                                }
+                              }
+                            }
+                            // Se achou livre, seleciona ele. Senão, puxa o primeiro (que vai dar o aviso de Erro de Ocupação)
+                            setTempAssociatedRoomId(freeRoomId || compatibleRooms[0]);
+                          } else {
+                            setTempAssociatedRoomId('');
+                          }
+                        } else {
+                          setTempAssociatedRoomId('');
+                        }
                       }
                       if (viewMode === 'turmas' && !manuallyToggledConsecutive) {
                         // Se houver professores que ensinam esta disciplina, selecionar o primeiro
@@ -6410,6 +6491,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       const tId = e.target.value;
                       setTempTeacher(tId);
                       setSlotError(null);
+                      setPendingLabConflict(null);
                       const teacher = teachers.find(t => t.id === tId);
                       // Se este professor só ensina uma disciplina e nenhuma está selecionada, auto-selecionar
                       if (teacher && teacher.subjectIds.length === 1 && !tempSubject) {
@@ -6533,15 +6615,40 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 </div>
               )}
 
+              {pendingLabConflict && (
+                <div className="mb-4 p-3 bg-amber-50 border-2 border-amber-200 rounded-xl flex flex-col gap-2 animate-in fade-in zoom-in-95">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold text-amber-800 leading-tight">
+                        A sala especial escolhida ({turmas.find(t => t.id === pendingLabConflict.roomId)?.name}) já está ocupada por outra turma neste(s) horário(s).
+                      </p>
+                      <p className="text-[9px] font-medium text-amber-700 mt-1">
+                        Deseja forçar a troca? A turma atual tomará a sala, e a antiga perderá o espelhamento no laboratório (sua aula regular continuará existindo).
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => saveSlot(true)}
+                    className="mt-2 w-full px-3 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all text-center flex justify-center items-center gap-2 border border-amber-300"
+                  >
+                    Sim, Forçar Troca de Turma
+                  </button>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button 
-                  onClick={() => setSelectedSlot(null)}
+                  onClick={() => {
+                    setSelectedSlot(null);
+                    setPendingLabConflict(null);
+                  }}
                   className="flex-1 px-4 py-3 bg-slate-100 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all uppercase tracking-widest"
                 >
                   Cancelar
                 </button>
                 <button 
-                  onClick={saveSlot}
+                  onClick={() => saveSlot(false)}
                   className="flex-1 px-4 py-3 bg-black text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all uppercase tracking-widest"
                 >
                   Confirmar
@@ -6552,6 +6659,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 onClick={() => {
                   setTempTeacher('');
                   setTempSubject('');
+                  setPendingLabConflict(null);
                 }}
                 className="w-full text-[9px] font-black text-red-400 hover:text-red-500 uppercase tracking-widest pt-2"
               >
