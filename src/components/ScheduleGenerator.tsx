@@ -39,7 +39,8 @@ import {
   Sun,
   Moon,
   CloudSun,
-  Key
+  Key,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -2210,12 +2211,12 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     const getTurmaTeacherInSlot = (turmaId: string, d: string, pr: number, currentSchedules: AllSchedules): string | null => {
       const slotId = `${d}-${pr}`;
       const s = currentSchedules[turmaId]?.[slotId];
-      if (s) return s.teacherId;
+      if (s && s.teacherId) return s.teacherId;
       for (const tid in currentSchedules) {
         const room = turmas.find(t => t.id === tid);
         if (room && room.isRoom) {
           const roomSlot = currentSchedules[tid]?.[slotId];
-          if (roomSlot && roomSlot.associatedTurmaId === turmaId) {
+          if (roomSlot && roomSlot.associatedTurmaId === turmaId && roomSlot.teacherId) {
             return roomSlot.teacherId;
           }
         }
@@ -2284,8 +2285,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
           const endP = g.shift === 'noite' ? 17 : g.shift === 'tarde' ? 12 : 6;
           for (let otherP = startP; otherP <= endP; otherP++) {
             if (otherP === p) continue;
-            const otherTeacher = getTurmaTeacherInSlot(g.turmaId, day, otherP, currentSchedules);
-            if (otherTeacher === g.teacherId) {
+            const slot = currentSchedules[g.turmaId]?.[`${day}-${otherP}`];
+            if (slot?.subjectId === g.subjectId) {
               hasClassOnDay = true;
               break;
             }
@@ -2303,20 +2304,24 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         }
       }
       
-      if (currentSchedules[g.turmaId]?.[slotId]) {
+      const existingSlot = currentSchedules[g.turmaId]?.[slotId];
+      if (existingSlot && (existingSlot.teacherId !== "" || existingSlot.subjectId !== "")) {
         return false;
       }
       for (const tid in currentSchedules) {
         const room = turmas.find(t => t.id === tid);
         if (room?.isRoom) {
-          if (currentSchedules[tid]?.[slotId]?.associatedTurmaId === g.turmaId) {
+          const rSlot = currentSchedules[tid]?.[slotId];
+          if (rSlot?.associatedTurmaId === g.turmaId && (rSlot.teacherId !== "" || rSlot.subjectId !== "")) {
             return false;
           }
         }
       }
       
       if (g.isLab) {
-        if (currentSchedules[roomId]?.[slotId]) {
+        const existingRoomSlot = currentSchedules[roomId]?.[slotId];
+        if (existingRoomSlot && (existingRoomSlot.teacherId !== "" || existingRoomSlot.subjectId !== "")) {
+          // Verify if it's already assigned to our exact requirement (usually false)
           return false;
         }
       }
@@ -2921,6 +2926,59 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       };
       setTurmas([...turmas, newTurma]);
       if (!selectedTurmaId) setSelectedTurmaId(newTurma.id);
+
+      // Desafio 1: Automatizar a inserção da Matriz Curricular (SEED-PR 2026) dependendo do perfil da escola e nível da turma
+      const isCCM = localStorage.getItem('cecm_is_civico_militar') === 'true';
+      const isEF = /6[º°oaA]|7[º°oaA]|8[º°oaA]|9[º°oaA]/.test(formattedName);
+      
+      const targetWorkloads: Record<string, number> = {};
+
+      if (isEF) {
+        if (isCCM) {
+          Object.assign(targetWorkloads, {
+            'sub-port': 5, 'sub-mat': 5, 'sub-cien': 4, 'sub-his': 3, 'sub-geo': 3,
+            'sub-ing': 2, 'sub-art': 2, 'sub-ef': 2, 'sub-ensr': 1,
+            'sub-cid': 2, 'sub-edfin': 1
+          });
+        } else {
+          Object.assign(targetWorkloads, {
+            'sub-port': 5, 'sub-mat': 5, 'sub-cien': 4, 'sub-his': 3, 'sub-geo': 3,
+            'sub-ing': 2, 'sub-art': 2, 'sub-ef': 2, 'sub-ensr': 1,
+            'sub-edfin': 1, 'sub-eddigc': 1, 'sub-pvida': 1
+          });
+        }
+      } else {
+        if (isCCM) {
+          Object.assign(targetWorkloads, {
+            'sub-port': 4, 'sub-mat': 4, 'sub-bio': 2, 'sub-fis': 2, 'sub-quim': 2,
+            'sub-his': 2, 'sub-geo': 2, 'sub-ing': 2, 'sub-art': 1, 'sub-ef': 1,
+            'sub-fil': 1, 'sub-soc': 1,
+            'sub-cid': 2, 'sub-eddigc': 2, 'sub-edfin': 1, 'sub-pvida': 1
+          });
+        } else {
+          Object.assign(targetWorkloads, {
+            'sub-port': 4, 'sub-mat': 4, 'sub-bio': 2, 'sub-fis': 2, 'sub-quim': 2,
+            'sub-his': 2, 'sub-geo': 2, 'sub-ing': 2, 'sub-art': 1, 'sub-ef': 1,
+            'sub-fil': 1, 'sub-soc': 1,
+            'sub-edfin': 2, 'sub-eddigc': 2, 'sub-pvida': 2
+          });
+        }
+      }
+
+      setSubjects(prev => prev.map(s => {
+        let work = targetWorkloads[s.id];
+        if (work !== undefined) {
+          return {
+            ...s,
+            allowedTurmaIds: s.allowedTurmaIds ? Array.from(new Set([...s.allowedTurmaIds, newTurma.id])) : [newTurma.id],
+            customWorkloads: {
+              ...(s.customWorkloads || {}),
+              [newTurma.id]: work
+            }
+          };
+        }
+        return s;
+      }));
     }
     
     setNewTurmaName('');
@@ -7041,6 +7099,27 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
               <div className="space-y-4">
                 <div>
+                  <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Perfil da Instituição</label>
+                  <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors">
+                    <div className="relative flex items-center justify-center shrink-0">
+                      <input 
+                        type="checkbox" 
+                        checked={localStorage.getItem('cecm_is_civico_militar') === 'true'}
+                        onChange={(e) => {
+                          const isCCM = e.target.checked;
+                          localStorage.setItem('cecm_is_civico_militar', isCCM ? 'true' : 'false');
+                          // Force re-render by updating an unrelated state or just relying on UI update
+                          setAcademicSystem(prev => prev);
+                        }}
+                        className="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer"
+                      />
+                      <Check className="w-3.5 h-3.5 text-white absolute opacity-0 scale-50 peer-checked:opacity-100 peer-checked:scale-100 transition-all pointer-events-none" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-800 uppercase">Colégio Cívico-Militar</span>
+                  </label>
+                </div>
+
+                <div>
                   <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Modalidade</label>
                   <select
                     value={academicSystem}
@@ -10455,6 +10534,31 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                             )}
                           </div>
                         </div>
+                      </div>
+
+                      {/* Perfil Cívico Militar */}
+                      <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200 animate-in fade-in duration-300">
+                        <label className="flex items-start gap-3 cursor-pointer group">
+                          <div className="relative flex items-center justify-center shrink-0 mt-0.5">
+                            <input 
+                              type="checkbox" 
+                              checked={localStorage.getItem('cecm_is_civico_militar') === 'true'}
+                              onChange={(e) => {
+                                const isCCM = e.target.checked;
+                                localStorage.setItem('cecm_is_civico_militar', isCCM ? 'true' : 'false');
+                                setAcademicSystem(prev => prev); // force re-render
+                              }}
+                              className="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded focus:ring-2 focus:ring-indigo-900 focus:ring-offset-1 checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer"
+                            />
+                            <Check className="w-3.5 h-3.5 text-white absolute opacity-0 scale-50 peer-checked:opacity-100 peer-checked:scale-100 transition-all pointer-events-none" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-slate-800 block mb-0.5">Colégio Cívico-Militar (CCM)</span>
+                            <span className="text-[10px] text-slate-500 leading-tight block max-w-sm">
+                              Ative esta opção se a sua unidade é um Colégio Cívico-Militar. Isso ajustará a estrutura curricular padrão ao cadastrar novas turmas.
+                            </span>
+                          </div>
+                        </label>
                       </div>
                     </div>
                     
