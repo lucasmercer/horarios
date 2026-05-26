@@ -69,6 +69,7 @@ interface Subject {
   useSalaMat?: boolean;
   labWorkload?: number;
   classWorkload?: number;
+  preferDoubleClasses?: boolean;
   roomIds?: string[];
   customWorkloads?: Record<string, number>;
   levelConstraint?: 'ambos' | 'fundamental' | 'medio' | 'tecnico';
@@ -392,6 +393,7 @@ export default function ScheduleGenerator() {
   
   const [selectedTurmasToPrint, setSelectedTurmasToPrint] = useState<string[]>([]);
   const [draggedOverCell, setDraggedOverCell] = useState<{ turmaId: string; slotId: string } | null>(null);
+  const [draggingSource, setDraggingSource] = useState<{turmaId: string, slotId: string, teacherId: string, subjectId: string, isLab: boolean} | null>(null);
   const [errorCell, setErrorCell] = useState<{ turmaId: string; slotId: string } | null>(null);
   const [dragErrorMsg, setDragErrorMsg] = useState<string | null>(null);
   const [isConfiguringTimeRanges, setIsConfiguringTimeRanges] = useState(false);
@@ -481,6 +483,9 @@ export default function ScheduleGenerator() {
   const [newSubjectGradeConstraint, setNewSubjectGradeConstraint] = useState('');
   const [newSubjectSuffixConstraint, setNewSubjectSuffixConstraint] = useState('');
   const [newSubjectAllowedTurmaIds, setNewSubjectAllowedTurmaIds] = useState<string[]>([]);
+  const [newSubjectPreferDouble, setNewSubjectPreferDouble] = useState<boolean>(false);
+  const [showMassImportModal, setShowMassImportModal] = useState(false);
+  const [csvData, setCsvData] = useState('');
   
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [tempTeacher, setTempTeacher] = useState('');
@@ -2138,7 +2143,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     keyMap.forEach((reqs, key) => {
       const first = reqs[0];
       const teacherObj = teachers.find(t => t.id === first.teacherId);
-      const wantsDouble = disableDoubleClassesGlobally ? false : (teacherObj?.preferDoubleClasses ?? false);
+      const subjectObj = subjects.find(s => s.id === first.subjectId);
+      const wantsDouble = disableDoubleClassesGlobally ? false : (teacherObj?.preferDoubleClasses || subjectObj?.preferDoubleClasses || false);
       
       let count = reqs.length;
       let idx = 0;
@@ -2267,8 +2273,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         }
       }
       
-      // Se o professor não quiser aulas geminadas (ou se for indefinido - por padrão false), regula a distribuição por dia na mesma turma
-      if (!teacher || teacher.preferDoubleClasses === false || teacher.preferDoubleClasses === undefined || disableDoubleClassesGlobally) {
+      // Se o professor/disciplina não for configurado ou se as aulas geminadas estiverem desativadas, regula a distribuição por dia na mesma turma
+      const gSubjectObj = subjects.find(s => s.id === g.subjectId);
+      const wantsDouble = !disableDoubleClassesGlobally && (teacher?.preferDoubleClasses || gSubjectObj?.preferDoubleClasses);
+      if (!wantsDouble) {
         // 1. Proibição absoluta de consecutividade imediata (aulas vizinhas do mesmo professor nesta turma)
         const prevTeacher = getTurmaTeacherInSlot(g.turmaId, day, p - 1, currentSchedules);
         const nextTeacher = getTurmaTeacherInSlot(g.turmaId, day, p + 1, currentSchedules);
@@ -2437,9 +2445,57 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       return false;
     };
 
+    const calculateTeacherPenalty = (scheds: AllSchedules) => {
+      let penalty = 0;
+      teachers.forEach(teacher => {
+        // Evaluate for each day and shift
+        DAYS.forEach(day => {
+          [PERIODS_MANHA, PERIODS_TARDE, PERIODS_NOITE].forEach(shiftPeriods => {
+            let firstClassIdx = -1;
+            let lastClassIdx = -1;
+            let count = 0;
+            
+            shiftPeriods.forEach((p, idx) => {
+              const slotId = `${day.id}-${p}`;
+              let hasClass = false;
+              for (const tid in scheds) {
+                if (scheds[tid]?.[slotId]?.teacherId === teacher.id) {
+                  hasClass = true;
+                  break;
+                }
+              }
+              if (hasClass) {
+                if (firstClassIdx === -1) firstClassIdx = idx;
+                lastClassIdx = idx;
+                count++;
+              }
+            });
+            
+            if (count > 0 && lastClassIdx > firstClassIdx) {
+              const span = lastClassIdx - firstClassIdx + 1;
+              const gaps = span - count;
+              if (gaps > 0) {
+                penalty += gaps * 10; // 10 points penalty per gap (janela)
+              }
+              if (firstClassIdx === 0 && lastClassIdx === shiftPeriods.length - 1 && gaps > 2) {
+                penalty += 50; // extra penalty for heavy gaps between extremes
+              }
+            }
+          });
+        });
+      });
+      return penalty;
+    };
+
     let solved = false;
     let attempt = 0;
-    while (!solved && attempt < 3) {
+    let bestGenerated: AllSchedules | null = null;
+    let bestPenalty = Infinity;
+    let minFailures = Infinity;
+    let bestPending: typeof pendingLessons = [];
+
+    // Try full backtracking max 2 times
+    while (!solved && attempt < 2) {
       attempt++;
       Object.keys(newSchedules).forEach(tid => {
         newSchedules[tid] = { ...(schedules[tid] || {}) };
@@ -2449,84 +2505,119 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       }
       steps = 0;
       solved = await solve(0);
-      if (solved) break;
+      if (solved) {
+        bestGenerated = JSON.parse(JSON.stringify(newSchedules));
+        bestPenalty = calculateTeacherPenalty(newSchedules);
+        minFailures = 0;
+        break;
+      }
     }
 
-    let failedLessonsCount = 0;
-
     if (!solved) {
-      Object.keys(newSchedules).forEach(tid => {
-        newSchedules[tid] = { ...(schedules[tid] || {}) };
-      });
-      if (effectiveMode === 'all') {
-        clearSchedulesForMode();
-      }
-
-      sortedGroups.forEach(g => {
-        const placements = getPossiblePlacementsForGroup(g);
-        
-        for (let i = placements.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [placements[i], placements[j]] = [placements[j], placements[i]];
+      // Greedy multi-start to find lowest failures and best penalty
+      for (let iter = 0; iter < 10; iter++) {
+        let tempSchedules: AllSchedules = {};
+        Object.keys(schedules).forEach(tid => {
+          tempSchedules[tid] = { ...(schedules[tid] || {}) };
+        });
+        if (effectiveMode === 'all') {
+            Object.keys(tempSchedules).forEach(tid => {
+              const isRoom = turmas.find(t => t.id === tid)?.isRoom;
+              if (overrideTurmaId && !isRoom && (Array.isArray(overrideTurmaId) ? !overrideTurmaId.includes(tid) : tid !== overrideTurmaId)) return;
+              Object.keys(tempSchedules[tid]).forEach(slotId => {
+                const [_, pStr] = slotId.split('-');
+                const p = parseInt(pStr);
+                if (overrideTurmaId && isRoom) {
+                  const associatedId = tempSchedules[tid][slotId]?.associatedTurmaId;
+                  if (associatedId && (Array.isArray(overrideTurmaId) ? !overrideTurmaId.includes(associatedId) : associatedId !== overrideTurmaId)) return;
+                }
+                if (effectiveShift === 'labs') {
+                  if (isRoom) delete tempSchedules[tid][slotId];
+                } else {
+                  if (targetPeriods.has(p)) delete tempSchedules[tid][slotId];
+                }
+              });
+            });
         }
-        
-        const roomsToTry = g.isLab ? g.allowedRooms : [g.turmaId];
-        
-        let placed = false;
-        for (const placement of placements) {
-          for (const rid of roomsToTry) {
-            let ok = true;
-            for (const p of placement.periods) {
-              if (!canPlacePeriod(g, placement.day, p, rid, newSchedules)) {
-                ok = false;
+
+        let failsIter = 0;
+        let pendingIter: typeof pendingLessons = [];
+
+        sortedGroups.forEach(g => {
+          const placements = getPossiblePlacementsForGroup(g);
+          for (let i = placements.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [placements[i], placements[j]] = [placements[j], placements[i]];
+          }
+          const roomsToTry = g.isLab ? g.allowedRooms : [g.turmaId];
+          let placed = false;
+          for (const placement of placements) {
+            for (const rid of roomsToTry) {
+              let ok = true;
+              for (const p of placement.periods) {
+                if (!canPlacePeriod(g, placement.day, p, rid, tempSchedules)) {
+                  ok = false;
+                  break;
+                }
+              }
+              if (ok) {
+                placement.periods.forEach(p => {
+                  const slotId = `${placement.day}-${p}`;
+                  if (!tempSchedules[rid]) tempSchedules[rid] = {};
+                  tempSchedules[rid][slotId] = {
+                    teacherId: g.teacherId,
+                    subjectId: g.subjectId,
+                    associatedTurmaId: g.isLab ? g.turmaId : undefined
+                  };
+                  if (g.isLab) {
+                    if (!tempSchedules[g.turmaId]) tempSchedules[g.turmaId] = {};
+                    tempSchedules[g.turmaId][slotId] = {
+                      teacherId: g.teacherId,
+                      subjectId: g.subjectId,
+                      associatedRoomId: rid
+                    };
+                  }
+                });
+                placed = true;
                 break;
               }
             }
-            
-            if (ok) {
-              placement.periods.forEach(p => {
-                const slotId = `${placement.day}-${p}`;
-                if (!newSchedules[rid]) newSchedules[rid] = {};
-                newSchedules[rid][slotId] = {
-                  teacherId: g.teacherId,
-                  subjectId: g.subjectId,
-                  associatedTurmaId: g.isLab ? g.turmaId : undefined
-                };
-                if (g.isLab) {
-                  if (!newSchedules[g.turmaId]) newSchedules[g.turmaId] = {};
-                  newSchedules[g.turmaId][slotId] = {
-                    teacherId: g.teacherId,
-                    subjectId: g.subjectId,
-                    associatedRoomId: rid
-                  };
-                }
-              });
-              placed = true;
-              break;
-            }
+            if (placed) break;
           }
-          if (placed) break;
-        }
+          if (!placed) {
+            failsIter += g.size;
+            pendingIter.push({
+              turmaName: turmas.find(t => t.id === g.turmaId)?.name || 'Vazia',
+              subjectName: subjects.find(s => s.id === g.subjectId)?.name || 'Desconhecida',
+              teacherName: teachers.find(t => t.id === g.teacherId)?.name || 'Desconhecido',
+              reason: `${g.size} aula(s): ` + (g.isLab ? 'Espaço indisponível.' : 'Conflito.'),
+              turmaId: g.turmaId,
+              subjectId: g.subjectId,
+              teacherId: g.teacherId,
+              isDouble: g.size > 1
+            });
+          }
+        });
 
-        if (!placed) {
-          failedLessonsCount += g.size;
-          const tObj = turmas.find(t => t.id === g.turmaId);
-          const sObj = subjects.find(s => s.id === g.subjectId);
-          const teaObj = teachers.find(t => t.id === g.teacherId);
-          pendingLessons.push({
-            turmaName: tObj?.name || 'Vazia',
-            subjectName: sObj?.name || 'Desconhecida',
-            teacherName: teaObj?.name || 'Desconhecido',
-            reason: `${g.size} aula(s): ` + (g.isLab 
-              ? 'Espaço indisponível em salas especiais ou conflito de professor.' 
-              : 'Professor ocupado ou choque de horário na turma.'),
-            turmaId: g.turmaId,
-            subjectId: g.subjectId,
-            teacherId: g.teacherId,
-            isDouble: g.size > 1
-          });
+        const pen = calculateTeacherPenalty(tempSchedules);
+        
+        // Pick the best based on fewest failures, then lowest penalty
+        if (failsIter < minFailures || (failsIter === minFailures && pen < bestPenalty)) {
+          minFailures = failsIter;
+          bestPenalty = pen;
+          bestGenerated = tempSchedules;
+          bestPending = pendingIter;
         }
-      });
+      }
+    }
+
+    const failedLessonsCount = minFailures;
+    pendingLessons.push(...bestPending);
+    
+    if (bestGenerated) {
+       Object.keys(bestGenerated).forEach(tid => {
+         newSchedules[tid] = bestGenerated![tid];
+       });
     }
 
     setSchedules(newSchedules);
@@ -2713,6 +2804,71 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     setNewTeacherSchoolWorkloadNoite(teacher.schoolWorkloadNoite?.toString() || '');
   };
 
+  const processMassImport = () => {
+    if (!csvData.trim()) return;
+
+    const lines = csvData.split('\n');
+    const newTeachers: Teacher[] = [];
+    const newSubjects: Subject[] = [...subjects]; // copy existing
+    let addedTeachers = 0;
+    let addedSubjects = 0;
+
+    lines.forEach(line => {
+      const parts = line.split('\t').length > 1 ? line.split('\t') : line.split(';'); // Try tab, then semicolon
+      if (parts.length >= 2) {
+        const tName = parts[0].trim();
+        if (!tName || tName.toLowerCase() === 'nome') return; // Skip empty or header
+
+        const subjectsStr = parts[1].trim();
+        const tSubjects = subjectsStr.split(',').map(s => s.trim()).filter(s => s);
+        
+        const teacherSubjectIds: string[] = [];
+
+        tSubjects.forEach(sName => {
+          let foundSub = newSubjects.find(s => normalizeGenericName(s.name) === normalizeGenericName(sName));
+          if (!foundSub) {
+            foundSub = {
+              id: generateId(),
+              name: sName,
+              workload: 2, // default workload
+              classWorkload: 2,
+              preferDoubleClasses: true // Usually classes >= 2
+            };
+            newSubjects.push(foundSub);
+            addedSubjects++;
+          }
+          if (!teacherSubjectIds.includes(foundSub.id)) {
+            teacherSubjectIds.push(foundSub.id);
+          }
+        });
+
+        // Add teacher
+        const existingTeacher = teachers.find(t => normalizeGenericName(t.name) === normalizeGenericName(tName));
+        if (!existingTeacher && !newTeachers.find(t => normalizeGenericName(t.name) === normalizeGenericName(tName))) {
+          newTeachers.push({
+            id: generateId(),
+            name: tName,
+            subjectIds: teacherSubjectIds,
+            unavailability: [],
+            preferDoubleClasses: true
+          });
+          addedTeachers++;
+        }
+      }
+    });
+
+    if (addedSubjects > 0) {
+      setSubjects(newSubjects);
+    }
+    if (addedTeachers > 0) {
+      setTeachers(prev => [...prev, ...newTeachers]);
+    }
+
+    alert(`Importação concluída: ${addedTeachers} professores e ${addedSubjects} disciplinas novas cadastrados.`);
+    setShowMassImportModal(false);
+    setCsvData('');
+  };
+
   const addSubject = () => {
     if (!newSubjectName.trim()) {
       alert('Por favor, insira o nome da disciplina');
@@ -2749,6 +2905,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       roomIds: newSubjectRoomIds,
       labWorkload: newSubjectLabWorkload,
       classWorkload: newSubjectClassWorkload,
+      preferDoubleClasses: newSubjectPreferDouble,
       customWorkloads: newSubjectCustomWorkloads,
       levelConstraint: newSubjectLevelConstraint,
       gradeConstraint: newSubjectGradeConstraint,
@@ -2798,6 +2955,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     setNewSubjectRoomIds(subject.roomIds || []);
     setNewSubjectLabWorkload(subject.labWorkload || 0);
     setNewSubjectClassWorkload(subject.classWorkload || 0);
+    setNewSubjectPreferDouble(subject.preferDoubleClasses || false);
     setNewSubjectCustomWorkloads(subject.customWorkloads || {});
     setNewSubjectLevelConstraint(subject.levelConstraint || 'ambos');
     setNewSubjectGradeConstraint(subject.gradeConstraint || '');
@@ -3267,6 +3425,24 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
   const handleDragStart = (e: React.DragEvent, sourceTurmaId: string, sourceSlotId: string) => {
     e.dataTransfer.setData('text/plain', JSON.stringify({ sourceTurmaId, sourceSlotId }));
     e.dataTransfer.effectAllowed = 'move';
+    
+    // Preparar para destacar células válidas
+    const slotData = schedules[sourceTurmaId]?.[sourceSlotId];
+    if (slotData) {
+      const isLab = !!slotData.associatedRoomId || (turmas.find(t => t.id === sourceTurmaId)?.isRoom ?? false);
+      setDraggingSource({
+        turmaId: sourceTurmaId,
+        slotId: sourceSlotId,
+        teacherId: slotData.teacherId,
+        subjectId: slotData.subjectId,
+        isLab
+      });
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggingSource(null);
+    setDraggedOverCell(null);
   };
 
   const handleDragOver = (e: React.DragEvent, targetTurmaId: string, targetSlotId: string) => {
@@ -3283,6 +3459,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
   const handleDrop = (e: React.DragEvent, targetTurmaId: string, targetSlotId: string) => {
     e.preventDefault();
     setDraggedOverCell(null);
+    setDraggingSource(null);
     try {
       const rawData = e.dataTransfer.getData('text/plain');
       if (!rawData) return;
@@ -6194,7 +6371,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                   ? teachers.find(t => t.id === activeSub.substituteTeacherId)
                                   : null;
 
-                                const cellBg = conflicts.length > 0 
+                                let cellBg = conflicts.length > 0 
                                   ? 'bg-red-50 hover:bg-red-100 border border-red-300 shadow-[inset_0_0_0_1px_rgba(239,68,68,0.2)]' 
                                   : slot 
                                     ? viewMode === 'rooms' 
@@ -6207,6 +6384,27 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                       : isGrayDay 
                                         ? 'bg-[#d5dee8]/80 hover:bg-[#d5dee8]'
                                         : 'bg-white hover:bg-slate-50/55';
+                                        
+                                let isDimmed = false;
+                                let isDragTargetValid = true;
+                                let dragInvalidReason: string | undefined = undefined;
+                                
+                                if (draggingSource) {
+                                  if (draggingSource.turmaId !== turma.id) {
+                                    isDimmed = true;
+                                  } else {
+                                    if (draggingSource.slotId !== slotId) {
+                                      const check = validateDragAndDrop(draggingSource.turmaId, draggingSource.slotId, turma.id, slotId);
+                                      if (check.isValid) {
+                                        cellBg = 'bg-emerald-100 border-emerald-400 shadow-[inset_0_0_0_2px_rgba(52,211,153,0.5)] z-10';
+                                      } else {
+                                        cellBg = 'bg-rose-100 border-rose-300 cursor-not-allowed opacity-90';
+                                        isDragTargetValid = false;
+                                        dragInvalidReason = check.error;
+                                      }
+                                    }
+                                  }
+                                }
 
                                 return (
                                   <td 
@@ -6215,18 +6413,26 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                     onDragOver={(e) => handleDragOver(e, turma.id, slotId)}
                                     onDragLeave={handleDragLeave}
                                     onDrop={(e) => handleDrop(e, turma.id, slotId)}
-                                    className={`p-1.5 border-r border-slate-300 cursor-pointer transition-all group relative ${
+                                    className={`p-1.5 border-r border-slate-300 cursor-pointer transition-all group relative ${isDimmed ? 'opacity-30 grayscale-[50%]' : ''} ${
                                       draggedOverCell?.turmaId === turma.id && draggedOverCell?.slotId === slotId
-                                        ? 'bg-blue-100 border-2 border-dashed border-blue-500 scale-[0.98] transition-all duration-100'
+                                        ? (isDragTargetValid ? 'bg-blue-100 border-2 border-dashed border-blue-500 scale-[0.98] transition-all duration-100 z-20' : 'bg-red-200 border-2 border-dashed border-red-500 scale-[0.98] transition-all duration-100 z-20')
                                         : errorCell?.turmaId === turma.id && errorCell?.slotId === slotId
                                           ? 'bg-red-600 border-2 border-red-800 text-white animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.6)] scale-[1.02] z-10'
                                           : cellBg
                                     }`}
                                   >
+                                    {draggedOverCell?.turmaId === turma.id && draggedOverCell?.slotId === slotId && !isDragTargetValid && dragInvalidReason && (
+                                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-3 py-2 bg-slate-900 border border-slate-700 text-white text-[9px] font-bold rounded shadow-xl whitespace-nowrap z-[60] animate-in fade-in zoom-in duration-75 pointer-events-none">
+                                        <AlertCircle className="w-3 h-3 text-red-400 inline-block mr-1.5 align-middle" />
+                                        <span className="align-middle">{dragInvalidReason}</span>
+                                        <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900 rotate-45 border-l border-t border-slate-700"></div>
+                                      </div>
+                                    )}
                                     {slot ? (
                                       <div 
                                         draggable="true"
                                         onDragStart={(e) => handleDragStart(e, turma.id, slotId)}
+                                        onDragEnd={handleDragEnd}
                                         className="flex flex-col items-center justify-center text-center overflow-hidden cursor-move w-full h-full select-none"
                                       >
                                         <span className={`text-[10px] font-black uppercase leading-[1.1] mb-0.5 truncate w-full px-1 ${errorCell?.turmaId === turma.id && errorCell?.slotId === slotId ? 'text-white' : conflicts.length > 0 ? 'text-red-600' : viewMode === 'rooms' ? 'text-indigo-900' : activeSub ? 'text-emerald-800' : isGrayDay ? 'text-[#000000]' : 'text-slate-800'}`}>
@@ -8688,6 +8894,26 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     </span>
                   </div>
                 </div>
+
+                <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200">
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className="relative flex items-center justify-center shrink-0 mt-0.5">
+                      <input 
+                        type="checkbox" 
+                        checked={newSubjectPreferDouble}
+                        onChange={(e) => setNewSubjectPreferDouble(e.target.checked)}
+                        className="peer appearance-none w-4 h-4 border-2 border-slate-300 rounded focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 checked:bg-amber-600 checked:border-amber-600 transition-all cursor-pointer"
+                      />
+                      <Check className="w-2.5 h-2.5 text-white absolute opacity-0 scale-50 peer-checked:opacity-100 peer-checked:scale-100 transition-all pointer-events-none" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-amber-900 block mb-0.5">Forçar Aulas Geminadas (Duplas)</span>
+                      <span className="text-[9px] text-amber-700/80 leading-tight block font-semibold">
+                        Prioriza blocos de 2 aulas consecutivas no mesmo dia para esta matéria específica (Padrão para matérias com 2 ou mais horários semanais). 
+                      </span>
+                    </div>
+                  </label>
+                </div>
               </div>
 
               {/* Excess Workload Guard */}
@@ -11093,26 +11319,34 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                          <Users className="w-4 h-4 text-purple-650 text-purple-600" />
                          Passo 4: Cadastro e Disponibilidade de Docentes ({teachers.length})
                       </h4>
-                      <button 
-                        onClick={() => {
-                          setEditingTeacherId(null);
-                          setNewTeacherName('');
-                          setNewTeacherSubjectIds([]);
-                          setNewTeacherUnavailability([]);
-                          setNewTeacherPreferDouble(true);
-                          setNewTeacherRequireShiftInterval(false);
-                          setNewTeacherTurmaIds([]);
-                          setNewTeacherSubjectTurmaMap({});
-                          setNewTeacherSchoolWorkload('');
-                          setNewTeacherSchoolWorkloadManha('');
-                          setNewTeacherSchoolWorkloadTarde('');
-                          setNewTeacherSchoolWorkloadNoite('');
-                          setIsAddingTeacher(true);
-                        }}
-                        className="px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase rounded-lg border-2 border-slate-900 shadow-[1px_1px_rgba(0,0,0,1)] shrink-0 transition-all cursor-pointer hover:shadow-[2px_2px_rgba(0,0,0,1)] active:translate-y-0"
-                      >
-                        + Cadastrar Professor
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => setShowMassImportModal(true)}
+                          className="px-3.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[10px] font-black uppercase rounded-lg border border-emerald-300 transition-all cursor-pointer"
+                        >
+                          Importar Planilha (Excel/CSV)
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setEditingTeacherId(null);
+                            setNewTeacherName('');
+                            setNewTeacherSubjectIds([]);
+                            setNewTeacherUnavailability([]);
+                            setNewTeacherPreferDouble(true);
+                            setNewTeacherRequireShiftInterval(false);
+                            setNewTeacherTurmaIds([]);
+                            setNewTeacherSubjectTurmaMap({});
+                            setNewTeacherSchoolWorkload('');
+                            setNewTeacherSchoolWorkloadManha('');
+                            setNewTeacherSchoolWorkloadTarde('');
+                            setNewTeacherSchoolWorkloadNoite('');
+                            setIsAddingTeacher(true);
+                          }}
+                          className="px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase rounded-lg border-2 border-slate-900 shadow-[1px_1px_rgba(0,0,0,1)] shrink-0 transition-all cursor-pointer hover:shadow-[2px_2px_rgba(0,0,0,1)] active:translate-y-0"
+                        >
+                          + Cadastrar Professor
+                        </button>
+                      </div>
                     </div>
                     
                     <p className="text-xs text-slate-500 max-w-xl font-sans">
@@ -11528,6 +11762,69 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+      {/* Mass Import Modal */}
+      <AnimatePresence>
+        {showMassImportModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-xl border border-slate-200"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center shrink-0">
+                    <Users size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 uppercase tracking-tight text-sm">Importação de Docentes em Massa</h3>
+                    <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Formato: Excel ou CSV</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowMassImportModal(false)} className="text-slate-400 hover:text-slate-700 p-2 cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-xs text-slate-600 mb-2 leading-relaxed">
+                Copie e cole os dados da sua planilha. Os dados devem seguir o formato de duas colunas separadas por tabulação ou ponto e vírgula: <b>Nome do Professor</b> e <b>Matérias (separadas por vírgula)</b>.
+              </p>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-slate-500 font-mono text-[10px] mb-4 space-y-1">
+                <p>Exemplo:</p>
+                <p className="font-bold text-slate-700">João Silva{"\t"}Matemática, Física</p>
+                <p className="font-bold text-slate-700">Maria Lima{"\t"}Língua Portuguesa</p>
+              </div>
+              
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Dados da Planilha</label>
+              <textarea 
+                value={csvData}
+                onChange={(e) => setCsvData(e.target.value)}
+                placeholder="Cole aqui os dados do Excel..."
+                className="w-full h-48 p-3 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-mono text-xs mb-4 resize-none custom-scrollbar"
+              />
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowMassImportModal(false)}
+                  className="flex-1 py-2.5 font-bold text-sm text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={processMassImport}
+                  className="flex-1 py-2.5 font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+                >
+                  Importar Docentes
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
       <AnimatePresence>
