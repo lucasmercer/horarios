@@ -24,7 +24,8 @@ import {
   Lock,
   CalendarClock,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -43,6 +44,7 @@ export default function DashboardLayout() {
   const [configLogoUrl, setConfigLogoUrl] = useState('');
   const [configEnableNoite, setConfigEnableNoite] = useState(false);
   const [configEnableAsincrona, setConfigEnableAsincrona] = useState(false);
+  const [configIsCivicoMilitar, setConfigIsCivicoMilitar] = useState(false);
   const [configApiKey, setConfigApiKey] = useState('');
 
   const handleOpenSettings = () => {
@@ -50,6 +52,7 @@ export default function DashboardLayout() {
     setConfigLogoUrl(localStorage.getItem('cecm_logo_url') || '');
     setConfigEnableNoite(localStorage.getItem('enable_noite_period') === 'true');
     setConfigEnableAsincrona(localStorage.getItem('enable_noite_asynchronous') === 'true');
+    setConfigIsCivicoMilitar(localStorage.getItem('cecm_is_civico_militar') === 'true');
     setConfigApiKey(localStorage.getItem('GEMINI_API_KEY') || '');
 
     const trimesterConfigStr = localStorage.getItem('cecm_trimester_config');
@@ -78,6 +81,7 @@ export default function DashboardLayout() {
     localStorage.setItem('cecm_logo_url', configLogoUrl);
     localStorage.setItem('enable_noite_period', configEnableNoite ? 'true' : 'false');
     localStorage.setItem('enable_noite_asynchronous', configEnableAsincrona ? 'true' : 'false');
+    localStorage.setItem('cecm_is_civico_militar', configIsCivicoMilitar ? 'true' : 'false');
     if (configApiKey.trim()) {
       localStorage.setItem('GEMINI_API_KEY', configApiKey.trim());
     } else {
@@ -653,6 +657,33 @@ export default function DashboardLayout() {
                         )}
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Perfil da Instituição */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                    <Building2 className="w-3.5 h-3.5" />
+                    Perfil da Instituição
+                  </h4>
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
+                    <label className="flex items-start gap-3 cursor-pointer group">
+                      <div className="relative flex items-center justify-center shrink-0 mt-0.5">
+                        <input 
+                          type="checkbox" 
+                          checked={configIsCivicoMilitar}
+                          onChange={(e) => setConfigIsCivicoMilitar(e.target.checked)}
+                          className="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded focus:ring-2 focus:ring-slate-900 focus:ring-offset-1 checked:bg-slate-900 checked:border-slate-900 transition-all cursor-pointer"
+                        />
+                        <Check className="w-3.5 h-3.5 text-white absolute opacity-0 scale-50 peer-checked:opacity-100 peer-checked:scale-100 transition-all pointer-events-none" />
+                      </div>
+                      <div className="hover:opacity-80 transition-opacity">
+                        <span className="text-sm font-bold text-slate-800 block leading-none mb-1">Colégio Cívico-Militar (CCM)</span>
+                        <span className="text-xs text-slate-500 font-medium leading-tight block">
+                          Altera a carga horária padrão inserida na criação de novas turmas (inclui Cidadania e Civismo).
+                        </span>
+                      </div>
+                    </label>
                   </div>
                 </div>
 
