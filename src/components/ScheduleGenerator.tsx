@@ -40,7 +40,9 @@ import {
   Moon,
   CloudSun,
   Key,
-  Check
+  Check,
+  BarChart2,
+  Clipboard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -486,6 +488,7 @@ export default function ScheduleGenerator() {
   const [newSubjectPreferDouble, setNewSubjectPreferDouble] = useState<boolean>(false);
   const [showMassImportModal, setShowMassImportModal] = useState(false);
   const [csvData, setCsvData] = useState('');
+  const [clipboardSlot, setClipboardSlot] = useState<{type: 'copy' | 'cut', sourceTurmaId: string, sourceSlotId: string, data: any} | null>(null);
   
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [tempTeacher, setTempTeacher] = useState('');
@@ -1873,7 +1876,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       }
     }
 
-    // Universal subjects that bypass standard automatic custom exclusion checks
+    // Identify universal subjects to bypass certain checks
     const universalSubjects = [
       'matemática', 'matematica',
       'português', 'portugues', 'língua portuguesa', 'lingua portuguesa', 'portugués',
@@ -1892,12 +1895,6 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     const isUniversal = universalSubjects.some(u => subjectNameLower.includes(u));
     const custom = S.customWorkloads?.[TId];
     
-    // If the subject has any custom workloads configured, treat it as restricted to those specified unless it is labeled universal
-    const hasAnyCustomWorkloads = S.customWorkloads && Object.keys(S.customWorkloads).length > 0;
-    if (hasAnyCustomWorkloads && custom === undefined && !isUniversal) {
-      return { workload: 0, classWorkload: 0, labWorkload: 0 };
-    }
-
     let defaultWorkload = S.workload;
     if (isFundamental && S.workloadFundamental !== undefined && S.workloadFundamental > 0) {
       defaultWorkload = S.workloadFundamental;
@@ -2378,12 +2375,12 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     };
 
     let steps = 0;
-    const maxSteps = 50000;
+    const maxSteps = 300000;
 
     const solve = async (groupIndex: number): Promise<boolean> => {
       steps++;
       if (steps > maxSteps) return false;
-      if (steps % 5000 === 0) {
+      if (steps % 10000 === 0) {
         await new Promise(r => setTimeout(r, 0));
       }
       if (groupIndex >= sortedGroups.length) return true;
@@ -2515,7 +2512,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
     if (!solved) {
       // Greedy multi-start to find lowest failures and best penalty
-      for (let iter = 0; iter < 10; iter++) {
+      for (let iter = 0; iter < 40; iter++) {
         let tempSchedules: AllSchedules = {};
         Object.keys(schedules).forEach(tid => {
           tempSchedules[tid] = { ...(schedules[tid] || {}) };
@@ -3254,7 +3251,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         const currentIsRoom = turmas.find(t => t.id === excludeTurmaId)?.isRoom;
         const otherIsRoom = turmas.find(t => t.id === turmaId)?.isRoom;
 
-        const assocClass1 = currentIsRoom ? optAssociatedTurmaId : excludeTurmaId;
+        const assocClass1 = currentIsRoom ? (optAssociatedTurmaId || tempAssociatedTurmaId) : excludeTurmaId;
         const assocClass2 = otherIsRoom ? schedule[slotId]?.associatedTurmaId : turmaId;
 
         if (assocClass1 && assocClass2 && assocClass1 === assocClass2) {
@@ -3456,16 +3453,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     setDraggedOverCell(null);
   };
 
-  const handleDrop = (e: React.DragEvent, targetTurmaId: string, targetSlotId: string) => {
-    e.preventDefault();
-    setDraggedOverCell(null);
-    setDraggingSource(null);
-    try {
-      const rawData = e.dataTransfer.getData('text/plain');
-      if (!rawData) return;
-      const { sourceTurmaId, sourceSlotId } = JSON.parse(rawData);
-      if (!sourceTurmaId || !sourceSlotId) return;
-
+  const performMoveOrSwap = (sourceTurmaId: string, sourceSlotId: string, targetTurmaId: string, targetSlotId: string) => {
       if (sourceTurmaId === targetTurmaId && sourceSlotId === targetSlotId) {
         return;
       }
@@ -3544,14 +3532,45 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
       setSchedules(updatedSchedules);
       localStorage.setItem('cecm_schedules', JSON.stringify(updatedSchedules));
+  };
+
+  const handleDrop = (e: React.DragEvent, targetTurmaId: string, targetSlotId: string) => {
+    e.preventDefault();
+    setDraggedOverCell(null);
+    setDraggingSource(null);
+    try {
+      const rawData = e.dataTransfer.getData('text/plain');
+      if (!rawData) return;
+      const { sourceTurmaId, sourceSlotId } = JSON.parse(rawData);
+      if (!sourceTurmaId || !sourceSlotId) return;
+
+      performMoveOrSwap(sourceTurmaId, sourceSlotId, targetTurmaId, targetSlotId);
     } catch (err) {
       console.error("Error on drop:", err);
     }
   };
 
   const handleSlotClick = (dayId: string, periodId: number, turmaId: string) => {
-    setSelectedTurmaId(turmaId);
     const slotId = `${dayId}-${periodId}`;
+    
+    if (clipboardSlot) {
+       if (clipboardSlot.sourceTurmaId !== turmaId) {
+          setConfirmConfig({
+            title: 'Operação Inválida',
+            message: 'A reorganização só é permitida dentro da própria turma para evitar erros de carga e currículo.',
+            confirmText: 'Entendi',
+            onConfirm: () => { setClipboardSlot(null); }
+          });
+          return;
+       }
+       if (clipboardSlot.sourceSlotId !== slotId) {
+          performMoveOrSwap(clipboardSlot.sourceTurmaId, clipboardSlot.sourceSlotId, turmaId, slotId);
+       }
+       setClipboardSlot(null);
+       return;
+    }
+
+    setSelectedTurmaId(turmaId);
     const currentSchedule = schedules[turmaId] || {};
     setSelectedSlot(slotId);
     const activeTeacherId = currentSchedule[slotId]?.teacherId || '';
@@ -5654,10 +5673,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     setIsShowingMissingClasses(true);
                     setIsMobileMenuOpen(false);
                   }}
-                  className="flex items-center gap-1.5 p-1.5 bg-amber-50 border border-amber-250 text-amber-800 rounded-md text-[9px] font-bold uppercase tracking-wide hover:bg-amber-100/80 transition shadow-xxs"
+                  className="flex items-center gap-1.5 p-1.5 bg-amber-50 border border-amber-250 text-amber-800 rounded-md text-[9px] font-bold uppercase tracking-wide hover:bg-amber-100/80 transition shadow-xxs cursor-pointer"
                 >
-                  <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />
-                  Aulas Faltantes
+                  <BarChart2 className="w-3 h-3 text-amber-600 shrink-0" />
+                  Visão Geral & Gráficos
                 </button>
               </div>
             </div>
@@ -6060,15 +6079,15 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               Wizard 🎉
             </button>
 
-            {/* Botão Aulas Faltantes ao lado de Logo Escola */}
+            {/* Botão Visão Geral ao lado de Logo Escola */}
             <button 
               id="btn-missing-classes-header"
               onClick={() => setIsShowingMissingClasses(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg text-[9px] font-black uppercase tracking-widest text-amber-800 hover:border-amber-500 hover:bg-amber-100 transition-all shadow-xs h-8"
-              title="Verificar Aulas Faltantes"
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg text-[9px] font-black uppercase tracking-widest text-amber-800 hover:border-amber-500 hover:bg-amber-100 transition-all shadow-xs h-8 cursor-pointer"
+              title="Painel de Visão Geral - Gráficos e Aulas Alocadas"
             >
-              <AlertCircle className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
-              Faltantes
+              <BarChart2 className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+              Visão Geral
             </button>
 
             {/* Botão Gerar Automaticamente */}
@@ -6162,6 +6181,15 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 </div>
                 Horários
               </button>
+              <button 
+                onClick={() => setIsHelpModalOpen(true)}
+                className="group flex items-center gap-1 px-2 py-0.5 bg-white border border-amber-300 hover:border-amber-500 rounded-md text-[9.5px] font-bold text-amber-700 hover:text-amber-800 transition-all shadow-xs"
+              >
+                <div className="p-0.5 bg-amber-50 text-amber-600 rounded group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                  <HelpCircle className="w-2.5 h-2.5" />
+                </div>
+                Ajuda & Manual
+              </button>
             </div>
           </div>
 
@@ -6230,6 +6258,35 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {clipboardSlot && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: -20, x: '-50%' }}
+            className="fixed top-20 left-1/2 z-[70] bg-indigo-900 border border-indigo-700 text-indigo-50 px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-3 backdrop-blur-md"
+          >
+            <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center">
+              <Clipboard className="w-3.5 h-3.5 text-indigo-300" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-100 block leading-tight">
+                Modo Recortar Ativo
+              </p>
+              <p className="text-[9px] font-medium text-indigo-300">
+                Clique num horário da mesma turma para mover.
+              </p>
+            </div>
+            <button 
+              onClick={() => setClipboardSlot(null)}
+              className="ml-2 w-6 h-6 rounded-full bg-indigo-800 hover:bg-indigo-700 text-indigo-200 flex items-center justify-center transition-colors border border-indigo-600"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Content (Shifted up) */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -6352,7 +6409,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                 const teacher = teachers.find(t => t.id === slot?.teacherId);
                                 const subject = subjects.find(s => s.id === slot?.subjectId);
                                 const associatedTurma = turmas.find(t => t.id === slot?.associatedTurmaId);
-                                const conflicts = getConflicts(day.id, actualPeriod, slot?.teacherId || '', turma.id);
+                                const conflicts = getConflicts(day.id, actualPeriod, slot?.teacherId || '', turma.id, slot?.associatedTurmaId);
                                 
                                 const activeSub = slot && substitutions.find(sub => {
                                   if (slot.teacherId === sub.absentTeacherId && sub.date) {
@@ -6389,7 +6446,20 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                 let isDragTargetValid = true;
                                 let dragInvalidReason: string | undefined = undefined;
                                 
-                                if (draggingSource) {
+                                if (clipboardSlot) {
+                                  if (clipboardSlot.sourceTurmaId !== turma.id) {
+                                    isDimmed = true;
+                                  } else if (clipboardSlot.sourceSlotId === slotId) {
+                                    cellBg = 'bg-indigo-100 border border-indigo-500 shadow-[inset_0_0_0_2px_rgba(99,102,241,0.5)] z-10 animate-pulse';
+                                  } else {
+                                    const check = validateDragAndDrop(clipboardSlot.sourceTurmaId, clipboardSlot.sourceSlotId, turma.id, slotId);
+                                    if (check.isValid) {
+                                      cellBg = 'bg-blue-50 border-blue-300 hover:bg-blue-100 shadow-[inset_0_0_0_2px_rgba(59,130,246,0.3)] hover:shadow-[inset_0_0_0_2px_rgba(59,130,246,0.6)] cursor-pointer';
+                                    } else {
+                                      cellBg = 'bg-rose-50 border-rose-200 cursor-not-allowed opacity-90';
+                                    }
+                                  }
+                                } else if (draggingSource) {
                                   if (draggingSource.turmaId !== turma.id) {
                                     isDimmed = true;
                                   } else {
@@ -6916,6 +6986,51 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 </div>
               )}
 
+              <div className="flex gap-2 pt-2 border-t border-slate-100">
+                <button 
+                  onClick={() => {
+                    if (selectedSlot && selectedTurmaId && schedules[selectedTurmaId]?.[selectedSlot]) {
+                       setClipboardSlot({ type: 'cut', sourceTurmaId: selectedTurmaId, sourceSlotId: selectedSlot, data: schedules[selectedTurmaId][selectedSlot] });
+                       setSelectedSlot(null);
+                    }
+                  }}
+                  disabled={!selectedSlot || !selectedTurmaId || !schedules[selectedTurmaId]?.[selectedSlot]}
+                  className="flex-[2] py-2 bg-slate-50 border border-slate-200 text-slate-600 rounded-lg text-[9px] font-bold hover:bg-slate-100 transition-all uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ✂️ Recortar
+                </button>
+                <button 
+                  onClick={() => {
+                    if (clipboardSlot && selectedSlot && selectedTurmaId) {
+                       setTempTeacher(clipboardSlot.data.teacherId || '');
+                       setTempSubject(clipboardSlot.data.subjectId || '');
+                       setTempAssociatedTurmaId(clipboardSlot.data.associatedTurmaId || '');
+                       setTempAssociatedRoomId(clipboardSlot.data.associatedRoomId || '');
+                       if (clipboardSlot.type === 'cut') {
+                          // Clear the source during "Confirmar" or actually just populate it to allow user to confirm. 
+                          // The actual move happens either manually or we can provide a smooth transition.
+                       }
+                    }
+                  }}
+                  disabled={!clipboardSlot}
+                  className="hidden flex-[2] py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-[9px] font-bold hover:bg-indigo-100 transition-all uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  📋 Colar
+                </button>
+                <button 
+                  onClick={() => {
+                    setTempTeacher('');
+                    setTempSubject('');
+                    setPendingLabConflict(null);
+                  }}
+                  className="flex-[2] py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-[9px] font-bold hover:bg-red-100 transition-all uppercase tracking-widest"
+                  title="Limpar Célula"
+                >
+                  <Trash2 className="w-3.5 h-3.5 inline-block -mt-0.5 mr-1" />
+                  Limpar
+                </button>
+              </div>
+
               <div className="flex gap-3">
                 <button 
                   onClick={() => {
@@ -6933,17 +7048,6 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   Confirmar
                 </button>
               </div>
-              
-              <button 
-                onClick={() => {
-                  setTempTeacher('');
-                  setTempSubject('');
-                  setPendingLabConflict(null);
-                }}
-                className="w-full text-[9px] font-black text-red-400 hover:text-red-500 uppercase tracking-widest pt-2"
-              >
-                Limpar Célula
-              </button>
             </motion.div>
           </div>
         )}
@@ -7192,6 +7296,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       </>
                     )}
                     <option value="especificas">Turma selecionada (Escolher turmas específicas)</option>
+                    <option value="conflitos">Apenas Aulas com Conflito (Vermelhas)</option>
                   </select>
                 </div>
 
@@ -7263,6 +7368,20 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                               turmas.filter(t => t.isRoom).forEach(t => applyClear(t.id, PERIODS_NOITE));
                             } else if (clearMode === 'especificas') {
                               clearSelectedTurmas.forEach(tid => applyClear(tid));
+                            } else if (clearMode === 'conflitos') {
+                              Object.keys(next).forEach(tid => {
+                                Object.keys(next[tid]).forEach(slotId => {
+                                  const [day, pStr] = slotId.split('-');
+                                  const p = parseInt(pStr);
+                                  const slot = next[tid][slotId];
+                                  if (slot && slot.teacherId) {
+                                    const confs = getConflicts(day, p, slot.teacherId, tid, slot.associatedTurmaId);
+                                    if (confs.length > 0) {
+                                      delete next[tid][slotId];
+                                    }
+                                  }
+                                });
+                              });
                             }
                             
                             return next;
@@ -9042,14 +9161,14 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               <div className="p-6 pb-4 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 bg-amber-500 text-white rounded-2xl shadow-lg shadow-amber-500/20">
-                    <AlertCircle className="w-6 h-6" />
+                    <BarChart2 className="w-6 h-6" />
                   </div>
                   <div>
                     <h3 className="text-xl font-black text-slate-900 uppercase">
-                      Diagnóstico de Aulas Faltantes
+                      Painel de Visão Geral
                     </h3>
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">
-                      Acompanhe quais aulas ainda precisam ser distribuídas por turma
+                      Resumo completo da contabilização de aulas e turmas
                     </p>
                   </div>
                 </div>
@@ -10300,6 +10419,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                           <li><strong className="text-slate-900">Quadro de Horários Central:</strong> Exibe a grade real da turma ou sala especial selecionada. Cada dia contém aulas do turno correspondente (Manhã: períodos 1 a 6; Tarde: períodos 7 a 12).</li>
                           <li><strong className="text-slate-900">Seletores Extras na Barra Superior:</strong> Você pode alterar o Nome da Escola e a Logomarca clicando neles diretamente, facilitando a emissão de relatórios escolares impressos personalizados.</li>
                           <li><strong className="text-slate-900">Troca de Modos de Visualização:</strong> Exiba a grade consolidada por <strong>Turma</strong> ou mude para conferir o agendamento em <strong>Salas Especiais / Laboratórios</strong>.</li>
+                          <li><strong className="text-slate-900">Lixeira (Limpezas Avançadas):</strong> Ao clicar no botão de apagar no menu superior, você pode esvaziar a grade inteira ou escolher limpezas precisas: <strong>Apagar apenas turmas selecionadas</strong>, ou <strong>Apagar Apenas Aulas com Conflito</strong> preservando todo o resto.</li>
                           <li><strong className="text-slate-900">Controles de Exportação e Backup (Action Row inferior):</strong> Salve dados no navegador, importe um arquivo JSON salvando as modificações completas, exporte backups de segurança e imprima os quadros por turma com excelente qualidade gráfica.</li>
                         </ul>
                         <div className="p-3.5 bg-indigo-50 border border-indigo-100 rounded-2xl text-indigo-805 flex gap-2">
@@ -10577,8 +10697,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                           <div className="flex gap-3 p-3 bg-indigo-50 border border-indigo-150 rounded-2xl text-indigo-805">
                             <Info className="w-5 h-5 shrink-0 text-indigo-500 mt-0.5" />
                             <div>
-                              <strong className="text-[10px] font-black uppercase tracking-wide block mb-0.5 font-sans">Módulo "Aulas Faltantes":</strong>
-                              Clique no botão <strong className="uppercase">Aulas Faltantes</strong> na barra superior a qualquer momento. Ele abre uma tabela interativa que exibe, disciplina por disciplina e turma por turma, quantas aulas ainda faltam para atingir a conformidade requerida do plano de ensino.
+                              <strong className="text-[10px] font-black uppercase tracking-wide block mb-0.5 font-sans">Módulo "Visão Geral":</strong>
+                              Clique no botão <strong className="uppercase">Visão Geral</strong> na barra superior a qualquer momento. Ele abre uma tabela interativa que exibe de forma detalhada o resumo do seu horário: com total de aulas esperadas, alocadas, faltantes e excessos em forma de gráficos.
                             </div>
                           </div>
                         </div>
