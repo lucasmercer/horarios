@@ -4064,6 +4064,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   
                   const teacher = teachers.find(t => t.id === slot?.teacherId);
                   const subject = subjects.find(s => s.id === slot?.subjectId);
+                  const associatedRoom = slot?.associatedRoomId ? turmas.find(t => t.id === slot.associatedRoomId) : null;
                   
                   const isGrayDay = day.id === 'ter' || day.id === 'qui';
                   const rowBgStyle = isGrayDay ? 'background-color: #d5dee8 !important;' : 'background-color: #ffffff !important;';
@@ -4095,7 +4096,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       <td class="p-time-cell">${time}</td>
                       <td class="slot-cell">
                         ${subject ? `<div class="subj-name">${formatSubjectName(subject.name, 16)}</div>` : '-'}
-                        ${teacher ? `<div class="prof-name">${formatTeacherName(teacher.name)}</div>` : ''}
+                        ${teacher ? `<div class="prof-name">
+                          ${formatTeacherName(teacher.name)}
+                          ${associatedRoom ? `<span style="display: inline-block; padding: 1px 2px; margin-left: 2px; background-color: #f1f5f9; color: #334155; border-radius: 2px; font-size: 5pt; font-weight: 800; border: 1px solid #cbd5e1; vertical-align: top;">${associatedRoom.name.split(' ')[0] || 'LAB'}</span>` : ''}
+                        </div>` : ''}
                       </td>
                       ${asyncCellHtml}
                     </tr>
@@ -4481,6 +4485,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
                            const teacher = teachers.find(t => t.id === slot?.teacherId);
                            const subject = subjects.find(s => s.id === slot?.subjectId);
+                           const associatedRoom = slot?.associatedRoomId ? turmas.find(t => t.id === slot.associatedRoomId) : null;
                            
                            const isPeriodOut = (turma.dailyClassCount || 6) === 5 && pIndex === 5 && !(shift === 'noite' && enableNoiteAsynchronous);
 
@@ -4488,7 +4493,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                              <td class="slot-cell" style="${isPeriodOut ? 'background-color: #f1f5f9 !important;' : ''}">
                                ${isPeriodOut ? '<div style="font-size: 5pt; color: #94a3b8; font-weight: 700; text-align: center; max-width: 100%; white-space: normal;">Turma não possui 6ª Aula</div>' : `
                                  ${subject ? `<div class="subj-name">${formatSubjectName(subject.name, 16)}</div>` : ''}
-                                 ${teacher ? `<div class="prof-name">${formatTeacherName(teacher.name)}</div>` : ''}
+                                 ${teacher ? `<div class="prof-name">
+                                   ${formatTeacherName(teacher.name)}
+                                   ${associatedRoom ? `<span style="display: inline-block; padding: 1px 2px; margin-left: 2px; background-color: #f1f5f9; color: #334155; border-radius: 2px; font-size: 4pt; font-weight: 800; border: 1px solid #cbd5e1;">${associatedRoom.name.split(' ')[0] || 'LAB'}</span>` : ''}
+                                 </div>` : ''}
                                `}
                              </td>
                            `;
@@ -4864,6 +4872,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   
                   const teacher = teachers.find(t => t.id === slot?.teacherId);
                   const subject = subjects.find(s => s.id === slot?.subjectId);
+                  const associatedRoom = slot?.associatedRoomId ? turmas.find(t => t.id === slot.associatedRoomId) : null;
                   const isGrayDay = day.id === 'ter' || day.id === 'qui';
                   const bgStyle = isGrayDay ? 'background-color: #f1f5f9 !important;' : 'background-color: #ffffff !important;';
                   
@@ -4887,6 +4896,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     }
                   }
 
+                  let labBadge = associatedRoom ? `<span style="display: inline-block; padding: 1px 2px; margin-left: 2px; background-color: #f1f5f9; color: #334155; border-radius: 2px; font-size: 4pt; font-weight: 800; border: 1px solid #cbd5e1; vertical-align: top;">${associatedRoom.name.split(' ')[0] || 'LAB'}</span>` : '';
+
                   return `
                     <tr style="${bgStyle}">
                       ${pIndex === 0 ? `<td rowspan="${desiredCount}" class="day-cell-small" style="font-weight: 950; font-size: 6.5pt; border: 0.5pt solid black; vertical-align: middle; text-align: center; background-color: ${day.printBg} !important; color: ${day.printText} !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; line-height: 1.1;">${day.label}</td>` : ''}
@@ -4894,7 +4905,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       <td class="p-time-cell-small" style="font-size: 5.3pt; border: 0.5pt solid black; padding: 1px 2px; text-align: center; color: #475569 !important; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${time}</td>
                       <td style="font-size: 6.2pt; border: 0.5pt solid black; padding: 1px 3px; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
                         <span style="font-weight: 850; text-transform: uppercase;">${subject ? formatSubjectName(subject.name, 14) : '-'}</span>
-                        ${teacher ? `<span style="font-size: 5.5pt; font-weight: 500; display: block; color: #334155;">${formatTeacherName(teacher.name)}</span>` : ''}
+                        ${teacher ? `<span style="font-size: 5.5pt; font-weight: 500; display: block; color: #334155;">${formatTeacherName(teacher.name)} ${labBadge}</span>` : ''}
                       </td>
                       ${asyncCellHtml}
                     </tr>
@@ -6519,6 +6530,16 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                           ) : (
                                             <span className="truncate w-full px-0.5">
                                               {formatTeacherName(teacher?.name)} {viewMode === 'rooms' && subject ? `• ${formatSubjectName(subject.name, 10)}` : ''}
+                                              {viewMode === 'turmas' && slot?.associatedRoomId && (
+                                                <span className="inline-block ml-1 px-1 bg-indigo-100 text-indigo-700 rounded text-[7px] font-black border border-indigo-200">
+                                                  {turmas.find(t => t.id === slot.associatedRoomId)?.name?.split(' ')?.[0] || 'LAB'}
+                                                </span>
+                                              )}
+                                              {viewMode === 'rooms' && slot?.associatedTurmaId && (
+                                                <span className="inline-block ml-1 px-1 bg-emerald-100 text-emerald-700 rounded text-[7px] font-black border border-emerald-200">
+                                                  {turmas.find(t => t.id === slot.associatedTurmaId)?.name || 'TURMA'}
+                                                </span>
+                                              )}
                                             </span>
                                           )}
                                         </div>
