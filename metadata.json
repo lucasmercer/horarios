@@ -1,6 +1,6 @@
 {
-  "name": "Remix: Sistema de Horários - CECM Gregório Szeremeta - horarios laboratorios",
-  "description": "Uma área de login moderna e responsiva para o sistema de horários do CECM Gregório Szeremeta.",
+  "name": "CE LUCAS LENIAR EF.M.P.",
+  "description": "Sistema de Gestão Escolar",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

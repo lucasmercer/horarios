@@ -1,0 +1,1947 @@
+{
+  "turmas": [
+    {
+      "id": "t-6a-manha",
+      "shift": "manha",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-7a-manha",
+      "shift": "manha",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-8a-manha",
+      "shift": "manha",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-9a-manha",
+      "shift": "manha",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-1a-manha",
+      "shift": "manha",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-1b-manha",
+      "shift": "manha",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-2a-manha",
+      "shift": "manha",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-2b-manha",
+      "shift": "manha",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-3a-manha",
+      "shift": "manha",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-6b-tarde",
+      "shift": "tarde",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-6c-tarde",
+      "shift": "tarde",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-7b-tarde",
+      "shift": "tarde",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-7c-tarde",
+      "shift": "tarde",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-8b-tarde",
+      "shift": "tarde",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-9b-tarde",
+      "shift": "tarde",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "t-9c-tarde",
+      "shift": "tarde",
+      "dailyClassCount": 6
+    },
+    {
+      "id": "lab-info-comp-id",
+      "isRoom": true,
+      "shift": "ambos"
+    },
+    {
+      "id": "lab-info-tab-id",
+      "isRoom": true,
+      "shift": "ambos"
+    },
+    {
+      "id": "sala-mat-id",
+      "isRoom": true,
+      "shift": "ambos"
+    }
+  ],
+  "schedules": {
+    "t-9a-manha": {
+      "qui-3": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geopr"
+      },
+      "qui-4": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "ter-1": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "sex-3": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qui-6": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "ter-4": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "sex-5": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "seg-1": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "ter-5": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "ter-3": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "qua-2": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "ter-2": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qua-3": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qui-2": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qua-6": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "qua-4": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "seg-5": {
+        "teacherId": "t-danielle-setti",
+        "subjectId": "sub-ram"
+      },
+      "qua-5": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "sex-2": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "sex-4": {
+        "teacherId": "t-danielle-setti",
+        "subjectId": "sub-ram"
+      },
+      "seg-6": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "seg-2": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "sex-6": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qua-1": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-cid"
+      },
+      "qui-5": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "seg-4": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "ter-6": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "sex-1": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-cid"
+      },
+      "seg-3": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-1": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      }
+    },
+    "t-7b-tarde": {
+      "qua-8": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-anmerc"
+      },
+      "qui-7": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-anmerc"
+      },
+      "sex-12": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "seg-8": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "sex-10": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "ter-11": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qui-11": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geopr"
+      },
+      "qua-9": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-8": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "seg-10": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "ter-10": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qua-7": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "qui-9": {
+        "teacherId": "t-allana", "subjectId": "sub-mat"
+      },
+      "ter-9": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "ter-12": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "seg-9": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "sex-8": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-cid"
+      },
+      "qua-12": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-hispr"
+      },
+      "sex-9": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qui-12": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "seg-12": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qua-11": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "ter-7": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "sex-7": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "ter-8": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "sex-11": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qua-10": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qui-10": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "seg-11": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "seg-7": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      }
+    },
+    "t-9c-tarde": {
+      "ter-8": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "sex-8": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-anmerc"
+      },
+      "qui-9": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qua-12": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qua-10": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qua-8": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "sex-10": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qua-9": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qui-11": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-anmerc"
+      },
+      "sex-12": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "seg-9": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geopr"
+      },
+      "sex-11": {
+        "teacherId": "t-meire",
+        "subjectId": "sub-leitpt"
+      },
+      "qui-7": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "ter-12": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "ter-7": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "sex-9": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "seg-12": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "seg-8": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-8": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "ter-11": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "sex-7": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "seg-11": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "seg-7": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qua-11": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "ter-9": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-12": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "ter-10": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qua-7": {
+        "teacherId": "t-meire",
+        "subjectId": "sub-leitpt"
+      },
+      "qui-10": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "seg-10": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      }
+    },
+    "t-3a-manha": {
+      "sex-5": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qua-4": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "sex-1": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "seg-2": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "sex-3": {
+        "teacherId": "t-edu",
+        "subjectId": "sub-quim"
+      },
+      "qui-1": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qui-5": {
+        "teacherId": "t-nathan",
+        "subjectId": "sub-lafis"
+      },
+      "seg-4": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "seg-6": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "seg-1": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qui-2": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "sex-4": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qui-6": {
+        "teacherId": "t-joana",
+        "subjectId": "sub-ef"
+      },
+      "ter-3": {
+        "teacherId": "t-joana",
+        "subjectId": "sub-ef"
+      },
+      "ter-5": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "seg-5": {
+        "teacherId": "t-edu",
+        "subjectId": "sub-quim"
+      },
+      "seg-3": {
+        "teacherId": "t-danielle-setti",
+        "subjectId": "sub-ram"
+      },
+      "qua-6": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "sex-2": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "ter-6": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qui-3": {
+        "teacherId": "t-danielle-setti",
+        "subjectId": "sub-ram"
+      },
+      "qua-2": {
+        "teacherId": "t-nathan",
+        "subjectId": "sub-fis"
+      },
+      "qua-3": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qua-5": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qui-4": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "qua-1": {
+        "teacherId": "t-nicole",
+        "subjectId": "sub-bio"
+      },
+      "ter-4": {
+        "teacherId": "t-nicole",
+        "subjectId": "sub-bio"
+      },
+      "ter-1": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "ter-2": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "sex-6": {
+        "teacherId": "t-danielle-setti",
+        "subjectId": "sub-ram"
+      }
+    },
+    "t-6b-tarde": {
+      "sex-9": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "ter-11": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "qua-9": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "seg-10": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "seg-7": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "sex-11": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "ter-10": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "qua-12": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-ensr"
+      },
+      "qui-8": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "seg-11": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-anmerc"
+      },
+      "sex-12": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qua-11": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "qui-7": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qui-11": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "qua-7": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "ter-9": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "sex-10": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "ter-7": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qui-12": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "ter-8": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-cid"
+      },
+      "qui-10": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "seg-12": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qua-10": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "seg-9": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "qua-8": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geopr"
+      },
+      "qui-9": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "sex-7": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "seg-8": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "ter-12": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-ensr"
+      },
+      "sex-8": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat",
+        "associatedRoomId": "sala-mat-id"
+      }
+    },
+    "t-8b-tarde": {
+      "seg-12": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-anmerc"
+      },
+      "seg-9": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "sex-12": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qua-10": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qui-12": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-7": {
+        "teacherId": "t-meire",
+        "subjectId": "sub-leitpt"
+      },
+      "seg-11": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "ter-8": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-9": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qui-10": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qua-8": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "ter-11": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qua-9": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "seg-7": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "ter-12": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "ter-7": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "seg-8": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "seg-10": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qua-11": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "sex-10": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "sex-8": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qua-7": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geopr"
+      },
+      "sex-7": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "sex-11": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "qui-11": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qui-8": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qua-12": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "ter-10": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "ter-9": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "sex-9": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      }
+    },
+    "t-7c-tarde": {
+      "seg-9": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-cid"
+      },
+      "qua-12": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qua-9": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "sex-12": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-anmerc"
+      },
+      "seg-8": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qua-8": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-12": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "ter-9": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qui-9": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-anmerc"
+      },
+      "seg-10": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "sex-7": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "sex-10": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "ter-12": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qua-7": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-hispr"
+      },
+      "seg-12": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qui-8": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "ter-7": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "sex-8": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qua-11": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "sex-9": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "ter-10": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "qui-7": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "seg-11": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "sex-11": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-10": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "seg-7": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "ter-11": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geopr"
+      },
+      "qua-10": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "ter-8": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qui-11": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-cid"
+      }
+    },
+    "t-6c-tarde": {
+      "qui-7": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "ter-9": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qua-7": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-ensr"
+      },
+      "ter-7": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-anmerc"
+      },
+      "seg-9": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "seg-11": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geopr"
+      },
+      "qui-11": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-8": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "seg-10": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-cid"
+      },
+      "seg-8": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-anmerc"
+      },
+      "sex-7": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "sex-11": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "qua-8": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qua-12": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "sex-9": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "sex-10": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "ter-8": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qui-9": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "sex-8": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "ter-11": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "seg-12": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "ter-12": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-10": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "seg-7": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qua-11": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qui-12": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "qua-10": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "ter-10": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qua-9": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "sex-12": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-ensr"
+      }
+    },
+    "t-7a-manha": {
+      "qui-1": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qui-2": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "seg-3": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qui-6": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "sex-3": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-cid"
+      },
+      "sex-2": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "ter-4": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qui-4": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geopr"
+      },
+      "ter-2": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-hispr"
+      },
+      "ter-3": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "sex-1": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qua-6": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "seg-6": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qua-5": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "seg-1": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "qua-4": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "sex-4": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "qua-1": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "ter-5": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "sex-6": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "seg-2": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qui-3": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "seg-4": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "ter-1": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "ter-6": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "sex-5": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "seg-5": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qua-2": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "qui-5": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "qua-3": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      }
+    },
+    "t-6a-manha": {
+      "ter-4": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "seg-5": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "sex-5": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "sex-3": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qui-5": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qua-5": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "ter-3": {
+        "teacherId": "t-danielle-setti",
+        "subjectId": "sub-ram"
+      },
+      "ter-1": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "seg-1": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "sex-2": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-ensr"
+      },
+      "qua-1": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qui-1": {
+        "teacherId": "t-danielle-setti",
+        "subjectId": "sub-ram"
+      },
+      "ter-2": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "seg-4": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qua-4": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "seg-2": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "ter-5": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-cid"
+      },
+      "qua-3": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-3": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qui-6": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "sex-1": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "sex-6": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "qui-2": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "ter-6": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qua-2": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-cid"
+      },
+      "qua-6": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-ensr"
+      },
+      "seg-6": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "sex-4": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-4": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat",
+        "associatedRoomId": "sala-mat-id"
+      },
+      "seg-3": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing",
+        "associatedRoomId": "lab-info-comp-id"
+      }
+    },
+    "t-8a-manha": {
+      "qui-2": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "seg-3": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "qui-6": {
+        "teacherId": "t-meire",
+        "subjectId": "sub-redl"
+      },
+      "seg-6": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "ter-1": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qua-2": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "sex-2": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "sex-3": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "ter-4": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qua-6": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "sex-1": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "seg-5": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "ter-3": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "qui-5": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-4": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "sex-6": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qua-4": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geopr"
+      },
+      "qua-1": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "sex-5": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "ter-6": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "ter-2": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "qua-3": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "qua-5": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-cid"
+      },
+      "seg-1": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-1": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "sex-4": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-hispr"
+      },
+      "ter-5": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "seg-2": {
+        "teacherId": "t-adri",
+        "subjectId": "sub-cien"
+      },
+      "seg-4": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qui-3": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-cid"
+      }
+    },
+    "t-2b-manha": {
+      "seg-2": {
+        "teacherId": "t-nicole",
+        "subjectId": "sub-bio"
+      },
+      "seg-5": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "sex-5": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "ter-1": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-2": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "sex-4": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "ter-3": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "qua-1": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "sex-3": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "sex-1": {
+        "teacherId": "t-joana",
+        "subjectId": "sub-ef"
+      },
+      "qui-5": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qua-5": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "seg-4": {
+        "teacherId": "t-joana",
+        "subjectId": "sub-ef"
+      },
+      "sex-2": {
+        "teacherId": "t-nicole",
+        "subjectId": "sub-bio"
+      },
+      "qua-3": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-comunmark"
+      },
+      "ter-6": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "ter-5": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "qui-3": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "sex-6": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-anmerc"
+      },
+      "seg-6": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-comunmark"
+      },
+      "ter-4": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qui-6": {
+        "teacherId": "t-edu",
+        "subjectId": "sub-quim"
+      },
+      "ter-2": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "qua-2": {
+        "teacherId": "t-matilde",
+        "subjectId": "sub-soc"
+      },
+      "qua-6": {
+        "teacherId": "t-edu",
+        "subjectId": "sub-quim"
+      },
+      "seg-3": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qui-1": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qua-4": {
+        "teacherId": "t-joana",
+        "subjectId": "sub-ef"
+      },
+      "qui-4": {
+        "teacherId": "t-nicole",
+        "subjectId": "sub-bio"
+      },
+      "seg-1": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      }
+    },
+    "t-1b-manha": {
+      "qua-2": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "ter-1": {
+        "teacherId": "t-joana",
+        "subjectId": "sub-ef"
+      },
+      "qui-4": {
+        "teacherId": "5cb28ea1-81ec-4595-9407-4a61529f7eb3",
+        "subjectId": "sub-fundmark"
+      },
+      "qui-6": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "sex-4": {
+        "teacherId": "t-nicole",
+        "subjectId": "sub-bio"
+      },
+      "qua-5": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "sex-1": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "sex-2": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "sex-6": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qui-2": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "ter-5": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qua-1": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qua-6": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "ter-3": {
+        "teacherId": "t-edu",
+        "subjectId": "sub-quim"
+      },
+      "seg-4": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-segmark"
+      },
+      "qui-5": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-mktcont"
+      },
+      "seg-5": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "ter-6": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-segmark"
+      },
+      "ter-4": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-mktcont"
+      },
+      "seg-3": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-comunmark"
+      },
+      "ter-2": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qua-4": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-comunmark"
+      },
+      "qua-3": {
+        "teacherId": "5cb28ea1-81ec-4595-9407-4a61529f7eb3",
+        "subjectId": "sub-fundmark"
+      },
+      "seg-1": {
+        "teacherId": "t-nicole",
+        "subjectId": "sub-bio"
+      },
+      "seg-2": {
+        "teacherId": "t-joana",
+        "subjectId": "sub-ef"
+      },
+      "seg-6": {
+        "teacherId": "t-edu",
+        "subjectId": "sub-quim"
+      },
+      "qui-3": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "sex-5": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-mktcont"
+      },
+      "sex-3": {
+        "teacherId": "t-joana",
+        "subjectId": "sub-ef"
+      },
+      "qui-1": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-comunmark"
+      }
+    },
+    "t-2a-manha": {
+      "qui-5": {
+        "teacherId": "t-nicole",
+        "subjectId": "sub-bio"
+      },
+      "ter-2": {
+        "teacherId": "t-nicole",
+        "subjectId": "sub-bio"
+      },
+      "seg-2": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "seg-4": {
+        "teacherId": "t-marcia-calixto",
+        "subjectId": "sub-fil"
+      },
+      "sex-6": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "qui-1": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qua-3": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "ter-1": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "seg-6": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "sex-3": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "seg-1": {
+        "teacherId": "t-joana",
+        "subjectId": "sub-ef"
+      },
+      "ter-3": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qui-6": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "ter-4": {
+        "teacherId": "t-nathan",
+        "subjectId": "sub-fis"
+      },
+      "qui-4": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qua-6": {
+        "teacherId": "t-matilde",
+        "subjectId": "sub-soc"
+      },
+      "seg-5": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "ter-6": {
+        "teacherId": "t-joana",
+        "subjectId": "sub-ef"
+      },
+      "qua-2": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "sex-4": {
+        "teacherId": "t-edu",
+        "subjectId": "sub-quim"
+      },
+      "ter-5": {
+        "teacherId": "t-meire",
+        "subjectId": "sub-leitpt"
+      },
+      "qui-2": {
+        "teacherId": "t-edu",
+        "subjectId": "sub-quim"
+      },
+      "sex-2": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "sex-5": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "sex-1": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qua-5": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "qui-3": {
+        "teacherId": "t-joana",
+        "subjectId": "sub-ef"
+      },
+      "qua-4": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "qua-1": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "seg-3": {
+        "teacherId": "t-nicole",
+        "subjectId": "sub-bio"
+      }
+    },
+    "t-1a-manha": {
+      "qui-3": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qui-2": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geopr"
+      },
+      "seg-6": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "ter-6": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat"
+      },
+      "qua-3": {
+        "teacherId": "t-edu",
+        "subjectId": "sub-quim"
+      },
+      "qua-1": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "sex-2": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "ter-5": {
+        "teacherId": "t-joana",
+        "subjectId": "sub-ef"
+      },
+      "ter-1": {
+        "teacherId": "t-nicole",
+        "subjectId": "sub-bio"
+      },
+      "qui-6": {
+        "teacherId": "t-nicole",
+        "subjectId": "sub-bio"
+      },
+      "qua-6": {
+        "teacherId": "t-bernadete",
+        "subjectId": "sub-art"
+      },
+      "sex-3": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "qua-2": {
+        "teacherId": "t-joana",
+        "subjectId": "sub-ef"
+      },
+      "seg-3": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "sex-1": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "qui-1": {
+        "teacherId": "t-ana-paula-hornung",
+        "subjectId": "sub-his"
+      },
+      "seg-1": {
+        "teacherId": "t-edu",
+        "subjectId": "sub-quim"
+      },
+      "seg-4": {
+        "teacherId": "t-nathan",
+        "subjectId": "sub-fis"
+      },
+      "sex-4": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qua-4": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qui-5": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "ter-4": {
+        "teacherId": "t-ana-paula",
+        "subjectId": "sub-geo"
+      },
+      "qui-4": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "seg-2": {
+        "teacherId": "t-isabella",
+        "subjectId": "sub-port"
+      },
+      "ter-3": {
+        "teacherId": "t-nathan",
+        "subjectId": "sub-lafis"
+      },
+      "seg-5": {
+        "teacherId": "t-kelly",
+        "subjectId": "sub-artp"
+      },
+      "ter-2": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing"
+      },
+      "qua-5": {
+        "teacherId": "t-cristiane",
+        "subjectId": "sub-edfin"
+      },
+      "sex-6": {
+        "teacherId": "t-nathan",
+        "subjectId": "sub-lafis"
+      },
+      "sex-5": {
+        "teacherId": "t-nicole",
+        "subjectId": "sub-bio"
+      }
+    },
+    "sala-mat-id": {
+      "qui-4": {
+        "teacherId": "t-allana",
+        "subjectId": "sub-mat",
+        "associatedTurmaId": "t-6a-manha"
+      }
+    },
+    "lab-info-comp-id": {
+      "seg-3": {
+        "teacherId": "t-eliane",
+        "subjectId": "sub-ing",
+        "associatedTurmaId": "t-6a-manha"
+      }
+    }
+  }
+}

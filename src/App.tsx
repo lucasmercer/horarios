@@ -43,7 +43,7 @@ function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [schoolName, setSchoolName] = useState('CECM Gregório Szeremeta');
+  const [schoolName, setSchoolName] = useState(localStorage.getItem('cecm_school_name') || 'CE LUCAS LENIAR EF.M.P.');
   const navigate = useNavigate();
 
   useEffect(() => {

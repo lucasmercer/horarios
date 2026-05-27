@@ -35,6 +35,13 @@ export default function DashboardCentral() {
     conflicts: 0
   });
 
+  const [shiftStats, setShiftStats] = useState({
+    manha: { expected: 0, distributed: 0, percentage: 0, missing: [] as string[] },
+    tarde: { expected: 0, distributed: 0, percentage: 0, missing: [] as string[] },
+    noite: { expected: 0, distributed: 0, percentage: 0, missing: [] as string[] },
+    labs: { expected: 0, distributed: 0, percentage: 0, missing: [] as string[] }
+  });
+
   const [incompleteTeachersCount, setIncompleteTeachersCount] = useState(0);
 
   const [schoolName, setSchoolName] = useState(() => localStorage.getItem('cecm_school_name') || 'CE LUCAS LENIAR EF.M.P.');
@@ -186,30 +193,89 @@ export default function DashboardCentral() {
 
       // Calculate class stats
       let expected = 0;
+      let expectedManha = 0;
+      let expectedTarde = 0;
+      let expectedNoite = 0;
+
+      let missingManhaDetails: string[] = [];
+      let missingTardeDetails: string[] = [];
+      let missingNoiteDetails: string[] = [];
+
       parsedTurmas.forEach((t: any) => {
-        expected += (t.dailyClassCount || 5) * 5;
+        const expectedCount = (t.dailyClassCount || 5) * 5;
+        expected += expectedCount;
+        
+        const tName = (t.name || '').toLowerCase();
+        const tShift = t.shift || (tName.includes('tarde') ? 'tarde' : tName.includes('noite') ? 'noite' : 'manha');
+        
+        if (tShift === 'manha') expectedManha += expectedCount;
+        else if (tShift === 'tarde') expectedTarde += expectedCount;
+        else if (tShift === 'noite') expectedNoite += expectedCount;
+
+        // Check if this specific turma is missing classes in its schedule
+        if (!t.isRoom) {
+          let filledCount = 0;
+          if (parsedSchedules[t.id]) {
+            Object.values(parsedSchedules[t.id]).forEach((s: any) => {
+              if (s && s.teacherId && s.subjectId) filledCount++;
+            });
+          }
+           
+          // Exclude check if expected is 0 logically or it has a discrepancy
+          if (filledCount < expectedCount) {
+             const diff = expectedCount - filledCount;
+             const msg = `${t.name}: Faltam ${diff} aula${diff > 1 ? 's' : ''}`;
+             if (tShift === 'manha') missingManhaDetails.push(msg);
+             else if (tShift === 'tarde') missingTardeDetails.push(msg);
+             else if (tShift === 'noite') missingNoiteDetails.push(msg);
+          }
+        }
       });
 
       let distributed = 0;
+      let distManha = 0;
+      let distTarde = 0;
+      let distNoite = 0;
+      let distLabs = 0;
+
       const teacherLoads: Record<string, number> = {};
       const slotTeacherMap: Record<string, Set<string>> = {};
       let conflictsCount = 0;
       
       // Calculate distributed, workloads and conflicts
+      const rawTurmas = savedTurmas ? JSON.parse(savedTurmas) : [];
+      
       Object.keys(parsedSchedules).forEach((turmaId) => {
+        const turmaObj = rawTurmas.find((t: any) => t.id === turmaId);
+        if (!turmaObj) return;
+
+        const isRoom = turmaObj.isRoom;
         const turmaSchedule = parsedSchedules[turmaId];
+        
         Object.keys(turmaSchedule).forEach((slotKey) => {
           const slot = turmaSchedule[slotKey];
           if (slot && slot.teacherId && slot.subjectId) {
-            distributed++;
-            teacherLoads[slot.teacherId] = (teacherLoads[slot.teacherId] || 0) + 1;
             
-            // Check for conflicts (same teacher in same slot in different class)
-            if (!slotTeacherMap[slotKey]) slotTeacherMap[slotKey] = new Set();
-            if (slotTeacherMap[slotKey].has(slot.teacherId)) {
-              conflictsCount++;
+            if (isRoom) {
+               distLabs++;
             } else {
-              slotTeacherMap[slotKey].add(slot.teacherId);
+               const tName = (turmaObj.name || '').toLowerCase();
+               const tShift = turmaObj.shift || (tName.includes('tarde') ? 'tarde' : tName.includes('noite') ? 'noite' : 'manha');
+
+               distributed++;
+               if (tShift === 'manha') distManha++;
+               else if (tShift === 'tarde') distTarde++;
+               else if (tShift === 'noite') distNoite++;
+
+               teacherLoads[slot.teacherId] = (teacherLoads[slot.teacherId] || 0) + 1;
+              
+               // Check for conflicts (same teacher in same slot in different class)
+               if (!slotTeacherMap[slotKey]) slotTeacherMap[slotKey] = new Set();
+               if (slotTeacherMap[slotKey].has(slot.teacherId)) {
+                 conflictsCount++;
+               } else {
+                 slotTeacherMap[slotKey].add(slot.teacherId);
+               }
             }
           }
         });
@@ -226,9 +292,19 @@ export default function DashboardCentral() {
       });
       setIncompleteTeachersCount(incompleteCount);
 
+      const calcPercentage = (dist: number, exp: number) => {
+        if (exp === 0) return 0;
+        if (dist === 0) return 0;
+        if (dist === exp) return 100;
+        const p = Math.round((dist / exp) * 100);
+        if (dist < exp && p >= 100) return 99;
+        if (dist > 0 && p <= 0) return 1;
+        return p;
+      };
+
       const excess = distributed > expected ? distributed - expected : 0;
       const missing = expected > distributed ? expected - distributed : 0;
-      const percentage = expected === 0 ? 0 : Math.round((distributed / expected) * 100);
+      const percentage = calcPercentage(distributed, expected);
 
       setClassStats({
         expected,
@@ -237,6 +313,13 @@ export default function DashboardCentral() {
         excess,
         percentage,
         conflicts: conflictsCount
+      });
+
+      setShiftStats({
+        manha: { expected: expectedManha, distributed: distManha, percentage: calcPercentage(distManha, expectedManha), missing: missingManhaDetails },
+        tarde: { expected: expectedTarde, distributed: distTarde, percentage: calcPercentage(distTarde, expectedTarde), missing: missingTardeDetails },
+        noite: { expected: expectedNoite, distributed: distNoite, percentage: calcPercentage(distNoite, expectedNoite), missing: missingNoiteDetails },
+        labs: { expected: 0, distributed: distLabs, percentage: 0, missing: [] } // Labs have no specific expected count here typically
       });
 
     } catch (e) {
@@ -480,7 +563,15 @@ export default function DashboardCentral() {
               <span className="text-[10px] text-rose-500 mt-0.5 font-semibold">Excedeu limite em {classStats.excess} aula(s). Revise.</span>
             )}
             {classStats.conflicts > 0 && (
-              <span className="text-[10px] text-rose-500 mt-0.5 font-semibold">{classStats.conflicts} conflito(s) em mesmo horário.</span>
+              <span 
+                className="text-[10px] text-rose-500 mt-0.5 font-semibold cursor-pointer hover:underline z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/horarios', { state: { highlightConflicts: true } });
+                }}
+              >
+                {classStats.conflicts} conflito(s) em mesmo horário.
+              </span>
             )}
           </div>
         </div>
@@ -570,11 +661,15 @@ export default function DashboardCentral() {
                   <span className="bg-slate-700 text-slate-300 px-2 py-0.5 rounded-md font-bold">{classStats.expected}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs font-medium">
-                  <span className="text-slate-300">Horários Gerados</span>
+                  <span className="text-slate-300">Aulas Distribuídas</span>
                   <span className="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-md font-bold">{classStats.distributed} ({classStats.percentage}%)</span>
                 </div>
-                <div className="flex justify-between items-center text-xs font-medium">
-                  <span className="text-slate-300">Total Faltante</span>
+                <div 
+                  onClick={() => navigate('/horarios?visaoGeral=true')}
+                  className="flex justify-between items-center text-xs font-medium cursor-pointer hover:bg-slate-700/50 p-1 -mx-1 rounded transition-colors group"
+                  title="Clique para abrir o Painel de Visão Geral"
+                >
+                  <span className="text-slate-300 group-hover:text-amber-300 transition-colors flex items-center gap-1.5"><ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />Total Faltante</span>
                   <span className={`px-2 py-0.5 rounded-md font-bold ${classStats.missing === 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
                     {classStats.missing === 0 ? 'OK' : classStats.missing}
                   </span>
@@ -590,6 +685,78 @@ export default function DashboardCentral() {
                   <span className={`px-2 py-0.5 rounded-md font-bold ${classStats.conflicts === 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
                     {classStats.conflicts === 0 ? 'NENHUM' : classStats.conflicts}
                   </span>
+                </div>
+                
+                {/* Breakdowns por Turno */}
+                <div className="pt-2 mt-2 border-t border-slate-700/50 space-y-2">
+                  <div className="flex justify-between items-center text-[10px] font-medium text-slate-400">
+                    <span className="uppercase tracking-wider flex items-center gap-1">
+                      Manhã
+                      {shiftStats.manha.missing.length > 0 && (
+                        <div className="group/tooltip relative flex items-center">
+                          <AlertCircle className="w-3 h-3 text-rose-500 cursor-help" />
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover/tooltip:flex flex-col bg-slate-800 text-slate-200 text-[10px] p-2 rounded-lg whitespace-nowrap shadow-xl z-50 pointer-events-none">
+                            <div className="font-bold text-white mb-1 border-b border-slate-700 pb-1">Turmas incompletas:</div>
+                            {shiftStats.manha.missing.map((m, i) => <div key={i}>{m}</div>)}
+                            <div className="w-2 h-2 bg-slate-800 absolute left-1/2 -translate-x-1/2 top-full -mt-1 rotate-45 border-r border-b border-transparent"></div>
+                          </div>
+                        </div>
+                      )}
+                    </span>
+                    <span>{shiftStats.manha.distributed} / {shiftStats.manha.expected} ({shiftStats.manha.percentage}%)</span>
+                  </div>
+                  <div className="w-full bg-slate-700/50 h-1.5 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-1000 ${shiftStats.manha.percentage === 100 ? 'bg-emerald-500' : shiftStats.manha.percentage > 100 ? 'bg-rose-500' : 'bg-blue-400'}`} style={{ width: `${Math.min(shiftStats.manha.percentage, 100)}%` }} />
+                  </div>
+                  
+                  <div className="flex justify-between items-center text-[10px] font-medium text-slate-400 mt-2">
+                    <span className="uppercase tracking-wider flex items-center gap-1">
+                      Tarde
+                      {shiftStats.tarde.missing.length > 0 && (
+                        <div className="group/tooltip relative flex items-center">
+                          <AlertCircle className="w-3 h-3 text-rose-500 cursor-help" />
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover/tooltip:flex flex-col bg-slate-800 text-slate-200 text-[10px] p-2 rounded-lg whitespace-nowrap shadow-xl z-50 pointer-events-none">
+                            <div className="font-bold text-white mb-1 border-b border-slate-700 pb-1">Turmas incompletas:</div>
+                            {shiftStats.tarde.missing.map((m, i) => <div key={i}>{m}</div>)}
+                            <div className="w-2 h-2 bg-slate-800 absolute left-1/2 -translate-x-1/2 top-full -mt-1 rotate-45 border-r border-b border-transparent"></div>
+                          </div>
+                        </div>
+                      )}
+                    </span>
+                    <span>{shiftStats.tarde.distributed} / {shiftStats.tarde.expected} ({shiftStats.tarde.percentage}%)</span>
+                  </div>
+                  <div className="w-full bg-slate-700/50 h-1.5 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-1000 ${shiftStats.tarde.percentage === 100 ? 'bg-emerald-500' : shiftStats.tarde.percentage > 100 ? 'bg-rose-500' : 'bg-blue-400'}`} style={{ width: `${Math.min(shiftStats.tarde.percentage, 100)}%` }} />
+                  </div>
+
+                  {shiftStats.noite.expected > 0 && (
+                    <>
+                      <div className="flex justify-between items-center text-[10px] font-medium text-slate-400 mt-2">
+                        <span className="uppercase tracking-wider flex items-center gap-1">
+                          Noite
+                          {shiftStats.noite.missing.length > 0 && (
+                            <div className="group/tooltip relative flex items-center">
+                              <AlertCircle className="w-3 h-3 text-rose-500 cursor-help" />
+                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover/tooltip:flex flex-col bg-slate-800 text-slate-200 text-[10px] p-2 rounded-lg whitespace-nowrap shadow-xl z-50 pointer-events-none">
+                                <div className="font-bold text-white mb-1 border-b border-slate-700 pb-1">Turmas incompletas:</div>
+                                {shiftStats.noite.missing.map((m, i) => <div key={i}>{m}</div>)}
+                                <div className="w-2 h-2 bg-slate-800 absolute left-1/2 -translate-x-1/2 top-full -mt-1 rotate-45 border-r border-b border-transparent"></div>
+                              </div>
+                            </div>
+                          )}
+                        </span>
+                        <span>{shiftStats.noite.distributed} / {shiftStats.noite.expected} ({shiftStats.noite.percentage}%)</span>
+                      </div>
+                      <div className="w-full bg-slate-700/50 h-1.5 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all duration-1000 ${shiftStats.noite.percentage === 100 ? 'bg-emerald-500' : shiftStats.noite.percentage > 100 ? 'bg-rose-500' : 'bg-blue-400'}`} style={{ width: `${Math.min(shiftStats.noite.percentage, 100)}%` }} />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="flex justify-between items-center text-[10px] font-medium text-slate-400 mt-2">
+                    <span className="uppercase tracking-wider">Salas / Labs (Soma das Alocações)</span>
+                    <span>{shiftStats.labs.distributed} slots</span>
+                  </div>
                 </div>
               </div>
             </div>

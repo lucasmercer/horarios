@@ -664,26 +664,54 @@ export default function DashboardLayout() {
                 <div className="space-y-3">
                   <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                     <Building2 className="w-3.5 h-3.5" />
-                    Perfil da Instituição
+                    Modelo / Perfil da Instituição (SEED-PR)
                   </h4>
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
-                    <label className="flex items-start gap-3 cursor-pointer group">
-                      <div className="relative flex items-center justify-center shrink-0 mt-0.5">
-                        <input 
-                          type="checkbox" 
-                          checked={configIsCivicoMilitar}
-                          onChange={(e) => setConfigIsCivicoMilitar(e.target.checked)}
-                          className="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded focus:ring-2 focus:ring-slate-900 focus:ring-offset-1 checked:bg-slate-900 checked:border-slate-900 transition-all cursor-pointer"
-                        />
-                        <Check className="w-3.5 h-3.5 text-white absolute opacity-0 scale-50 peer-checked:opacity-100 peer-checked:scale-100 transition-all pointer-events-none" />
+                  <div className="grid grid-cols-1 gap-2">
+                    {/* Option 1: Colégio Estadual Regular */}
+                    <button
+                      type="button"
+                      onClick={() => setConfigIsCivicoMilitar(false)}
+                      className={`flex items-start gap-3 p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                        !configIsCivicoMilitar
+                          ? 'bg-emerald-50/60 border-emerald-500 ring-2 ring-emerald-500/10'
+                          : 'bg-slate-50/60 border-slate-200 hover:bg-slate-100/60'
+                      }`}
+                    >
+                      <div className={`mt-0.5 w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                        !configIsCivicoMilitar ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 bg-white'
+                      }`}>
+                        {!configIsCivicoMilitar && <div className="w-2 h-2 rounded-full bg-white" />}
                       </div>
-                      <div className="hover:opacity-80 transition-opacity">
-                        <span className="text-sm font-bold text-slate-800 block leading-none mb-1">Colégio Cívico-Militar (CCM)</span>
-                        <span className="text-xs text-slate-500 font-medium leading-tight block">
-                          Altera a carga horária padrão inserida na criação de novas turmas (inclui Cidadania e Civismo).
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 block leading-tight mb-0.5">Colégio Estadual Regular</span>
+                        <span className="text-[10px] text-slate-500 leading-snug block">
+                          Modalidade de ensino estadual regular padrão da SEED-PR (inclui Projeto de Vida, Ed. Financeira/Digital de forma padrão).
                         </span>
                       </div>
-                    </label>
+                    </button>
+
+                    {/* Option 2: Colégio Estadual Cívico-Militar */}
+                    <button
+                      type="button"
+                      onClick={() => setConfigIsCivicoMilitar(true)}
+                      className={`flex items-start gap-3 p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                        configIsCivicoMilitar
+                          ? 'bg-blue-50/60 border-blue-500 ring-2 ring-blue-500/10'
+                          : 'bg-slate-50/60 border-slate-200 hover:bg-slate-100/60'
+                      }`}
+                    >
+                      <div className={`mt-0.5 w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                        configIsCivicoMilitar ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white'
+                      }`}>
+                        {configIsCivicoMilitar && <div className="w-2 h-2 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 block leading-tight mb-0.5">Colégio Cívico-Militar (CCM)</span>
+                        <span className="text-[10px] text-slate-500 leading-snug block">
+                          Modalidade de ensino cívico-militar (CCM-PR) com matriz curricular adaptada (Cidadania e Civismo, etc.).
+                        </span>
+                      </div>
+                    </button>
                   </div>
                 </div>
 
@@ -1212,13 +1240,13 @@ export default function DashboardLayout() {
                       </h4>
                       <div className="space-y-3 text-xs text-slate-600 font-sans leading-relaxed">
                         <p>
-                          Bem-vindo ao <strong>Sistema de Gestão Escolar Integrado</strong>. Na tela inicial (Dashboard) você encontra uma visão geral rápida da situação e status de gerência de tempo e professores.
+                          Bem-vindo ao <strong>Sistema de Gestão Escolar Integrado</strong>. Na tela inicial (Dashboard) você encontra uma visão geral rápida da situação e status de gerência do preenchimento das turmas e possíveis conflitos no algoritmo matricial.
                         </p>
                         <ul className="list-disc pl-5 space-y-1.5 font-sans">
-                          <li><strong>Configurar Sistema:</strong> Altere as propriedades fundamentais como Nome do Colégio, Logotipo, Modalidades de Período Acadêmico (Trimestre/Bimestre) e ative a arquitetura estrutural do turno Noturno se houver.</li>
-                          <li><strong>Importar e Gerar Backup (.txt):</strong> Mantenha a integridade de seus dados sempre alta gerando backups em formato JSON puro que podem ser compartilhados offline ou enviados via WhatsApp por segurança, e restaurados utilizando a opção Importar Backup. A importação <strong className="text-red-500">substituirá</strong> os dados atuais!</li>
-                          <li><strong>Identidade e Menus:</strong> Toda a navegação se encontra encapsulada nas abas laterais do painel esquerdo, que é adaptativo para tablets e smartphones (sendo escondido sob um menu "hamburguer").</li>
-                          <li><strong>Versionamento:</strong> O sistema mantém controle estrito de versões a fim de auxiliar manutenções de infraestrutura com apoio do Professor Lucas M. Leniar.</li>
+                          <li><strong>Métricas:</strong> O quadro exibe uma porcentagem em tempo real sobre a alocação de aulas e aponta a quantidade exata de conflitos pendentes (com atalho direto para a grade visual de conflitos) e o total de faltas ou cargas letivas excedidas.</li>
+                          <li><strong>Configurar Sistema:</strong> Altere as propriedades fundamentais como Nome do Colégio, Logotipo, Modalidades de Período Acadêmico (Trimestre/Bimestre) e ative a arquitetura de horários customizada ou turnos noturnos.</li>
+                          <li><strong>Exportar e Importar Backup (.gec ou .json):</strong> Exporte toda a estrutura do sistema (turmas, docentes, disciplinas e horários configurados) de backup como arquivo e restaure a qualquer instante. <strong className="text-red-500">A importação substitui totalmente seus dados locais!</strong></li>
+                          <li><strong>Acompanhamento:</strong> Você avista o TOP 5 professores com maior carga letiva na escola, além de acessar de forma veloz o controle local temporário em seu cache de navegação.</li>
                         </ul>
                       </div>
                     </div>
@@ -1232,24 +1260,14 @@ export default function DashboardLayout() {
                       </h4>
                       <div className="space-y-3 text-xs text-slate-600 font-sans leading-relaxed">
                         <p>
-                          A área de "Horários" é o coração estratégico da aplicação, responsável por calcular, validar e alocar recursos letivos baseando-se estritamente na <strong>disponibilidade cadastrada dos Professores</strong> e nas restrições curriculares das Disciplinas.
+                          O módulo "Horários" é o coração estratégico da aplicação, responsável por calcular, validar e alocar aulas baseando-se restritamente na <strong>disponibilidade dos Docentes</strong> e nas exigências ou parâmetros criados para as Disciplinas.
                         </p>
                         <ul className="list-disc pl-5 space-y-1.5 font-sans">
-                          <li><strong className="text-slate-900 text-[11px] block mt-2">Visão Geral:</strong> Exibe a grade real separada por turmas ou laboratórios. Dias e janelas de aulas são exibidos lado a lado num quadrante estático. Lembre-se, o turno da noite possui arquitetura de 5 tempos caso selecionado, ou 5 aulas + 1 tempo assíncrono final se a opção da carga EAD noturna estiver ativada nas configurações.</li>
-                          <li><strong className="text-slate-900 text-[11px] block mt-2">Alocação Automática:</strong> Use "Gerar Auto" para usar os algoritmos internos de alocação de tempo buscando preencher todas as janelas possíveis seguindo restrições hardcoded e disponibilidade de professores.</li>
-                          <li><strong className="text-slate-900 text-[11px] block mt-2">Alocação e Edição Manual:</strong> Pressionando nas lacunas temporais para editar, o processo torna-se inteiramente Manual.
-                            <ul className="list-[circle] pl-4 mt-1 space-y-1">
-                              <li><strong>Aulas Geminadas:</strong> O sistema sugere aulas duplas (geminadas) para professores que têm esta preferência. Caso ativado, os cálculos de carga horária e conflitos englobarão os 2 tempos. Se a disciplina necessitar de laboratório, serão alocados simultaneamente os 2 tempos na sala da turma, e os 2 tempos na sala do laboratório (espelhamento).</li>
-                              <li><strong>Associação com Laboratórios (Inteligente):</strong> Se você selecionar uma Matéria que exige laboratórios, a opção de "Espelhar em Sala Especial?" selecionará e carimbará o primeiro laboratório correspondente que estiver livre neste horário <strong>automaticamente</strong>.</li>
-                              <li><strong>Conflitos de Espaço Físico:</strong> Se existirem apenas laboratórios ocupados por outras turmas no horário escolhido, o sistema exibirá um aviso alertando qual turma está nele. O sistema permitirá "Forçar Troca", onde a sua turma atual "tomará a posse" da sala, e a turma que anteriormente possuia a reserva da sala perderá apenas o espelhamento no laboratório (mas terá sua aula regular na sala de aula convencional inalterada).</li>
-                            </ul>
-                          </li>
-                          <li><strong className="text-slate-900 text-[11px] block mt-2">Reorganização Rápida (Arrastar e Soltar):</strong> Você pode arrastar uma aula (clique, segure e mova) para uma lacuna vazia no calendário ou sobre uma aula existente para realizar a troca direta de dias e horários - a funcionalidade de drag and drop obedece as seguintes checagens:
-                            <ul className="list-[circle] pl-4 mt-1 space-y-1">
-                              <li>A reorganização manual <strong>só é permitida dentro da própria turma</strong> para não corromper os cálculos internos de carga horária do sistema gerador completo.</li>
-                              <li>Se a aula movida for vinculada a algum laboratório, todo o espelhamento acompanhará a aula ou acusará erro caso o laboratório de destino já esteja ocupado naquele horário.</li>
-                            </ul>
-                          </li>
+                          <li><strong className="text-slate-900 text-[11px] block mt-2">Visão Turmas x Salas Especiais:</strong> Use a engrenagem no topo de configurações e intercale se deseja visualizar e formatar a escala observando de fora o âmbito de Turma Padrão Geral ou as matrizes espelhadas de Laboratórios Isolados (verificando reservas de ambientes físicos específicos).</li>
+                          <li><strong className="text-slate-900 text-[11px] block mt-2">Alocação Automática x Assistente:</strong> Pressione "Assistente" (ícone Mágica) para abrir o painel inteligente e o sistema preencher as lacunas vazias otimizando cruzamentos sem quebrar bloqueios de horários dos profissionais ou restrições de salas geminadas.</li>
+                          <li><strong className="text-slate-900 text-[11px] block mt-2">Alocação e Edição Manual Interativa:</strong> Clique vazio num slot (célula) e será sugerido a alocação disponível, considerando conflitos de sobreposições em tempo real (que sinalizará de imediato as turmas impactadas informando "Professor Indisponível" ou "Professor no 1ºA").</li>
+                          <li><strong className="text-slate-900 text-[11px] block mt-2">Espelhamento em Salas Especiais (Métrica de Carga):</strong> Quando uma disciplina vinculada a um laboratório é alocada, ambos (a turma presencial e a sala do laboratório) exibirão aquele horário. Contudo, essa inserção <strong>não conta como "aula a mais"</strong>. É um espelhamento puramente logístico: A carga real dada pelo professor continua sendo apenas 1 aula, e o volume total da matéria também não dobra.</li>
+                          <li><strong className="text-slate-900 text-[11px] block mt-2">Arrastar e Soltar:</strong> Você pode transferir e permutar componentes de ensino arrastando blocos e trocando duas disciplinas ou dias alocados. Conflitos graves no arrastar e soltar poderão deletar lacunas se um professor não constar como disponível ou o laboratório de destino estiver tomado pela capacidade de outra escola.</li>
                         </ul>
                       </div>
                     </div>
@@ -1259,16 +1277,17 @@ export default function DashboardLayout() {
                     <div className="space-y-4 animate-in fade-in duration-200">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2 border-b-2 border-slate-100 pb-2">
                         <Users className="w-4 h-4 text-emerald-600 px-0.5" />
-                        3. Gestão e Disponibilidade de Professores
+                        3. Gestão de Professores
                       </h4>
                       <div className="space-y-3 text-xs text-slate-600 font-sans leading-relaxed">
                         <p>
-                          Os docentes guiam as regras de restrição primárias do gerador. Neste painel de tabelas gerencie quem é apto a lecionar qual grade de aulas. 
+                          Painel para gestão de regras de alocação pessoal. Neste módulo você gerencia a aptidão, disponibilidade horária, além de estabelecer travas por turno garantindo bem estar da carga humana em sua instituição.
                         </p>
                         <ul className="list-disc pl-5 space-y-1.5 font-sans">
-                          <li><strong>Controle de Horas (Grade de Disponibilidade Pessoal):</strong> Quando um docente for inserido na base, defina suas janelas de tempo "cinzas" (bloqueadas) ou disponíveis.</li>
-                          <li><strong>Vinculando Conhecimentos:</strong> Um professor de matemática também pode apresentar compatibilidade a disciplinas Eletivas. Atribua estas matérias na edição do seu cartão ou crie sub-registros de matérias genéricas e permita o docente ser sorteado pelo construtor.</li>
-                          <li><strong>Limites da Carga Letiva Exata:</strong> Você deve evitar que o sistema crie turmas exaustivas adicionando um teto rígido numérico na ficha do docente que indica as aulas globais que o mesmo pode lecionar.</li>
+                          <li><strong>Controle de Disponibilidade Visual:</strong> Cada período (manha/tarde/noite) dispõe de matriz em checkbox definindo janelas de bloqueio (onde o gerador nunca colocará aquele determinado professor).</li>
+                          <li><strong>Regras de Intervalo e Aulas Geminadas:</strong> Force o sistema interligar "aulas duplas no mesmo dia" caso uma rotina exija que um conteúdo não seja repassado separadamente, bem como estipular o intervalo obrigatório protetor para troca entre fluxos Tarde e Noite para descanso.</li>
+                          <li><strong>Limites da Carga Letiva:</strong> Delimitar teto macro global geral (ex: 20 aulas do concurso e encerramento para outra escola), ou se preferir, configurar micro-tetos fragmentados estipulando que o limite deste professor ocorre separadamente até "Manhã: 5," "Tarde: 2". Estes cálculos evitarão sub-aproveitação da força docente de sua arquitetura.</li>
+                          <li><strong>Limitações e Associações Diretivas:</strong> Associar professor X apenas com a turma A em tal disciplina específica (atribuição forçada ou whitelisting).</li>
                         </ul>
                       </div>
                     </div>
@@ -1278,21 +1297,16 @@ export default function DashboardLayout() {
                     <div className="space-y-4 animate-in fade-in duration-200">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2 border-b-2 border-slate-100 pb-2">
                         <GraduationCap className="w-4 h-4 text-pink-600 px-0.5" />
-                        4. Distribuição de Turmas e Infraestrutura
+                        4. Turmas e Ambientes Computacionais (Salas Especiais)
                       </h4>
                       <div className="space-y-3 text-xs text-slate-600 font-sans leading-relaxed">
                         <p>
-                          A aba de Turmas gerencia as salas físicas da escola, divididas em duas grandes categorias: as <strong>Turmas Padrões</strong> (que acomodam os alunos regularmente) e as <strong>Salas Especiais/Laboratórios</strong>.
+                          A aba gerencia as entidades da escola, divididas puramente entre <strong>Turmas Regulares Clássicas</strong> (que acomodam os alunos num período definido para processamentos curriculares) e as <strong>Salas Especiais</strong>.
                         </p>
                         <ul className="list-disc pl-5 space-y-1.5 font-sans">
-                          <li><strong>Turmas Regulares:</strong> Armazena o corpo discente físico alocado (como os agrupamentos de 1º ano B - Tarde). Cada turma possui um limite de preenchimento diário (geralmente até a 5ª ou 6ª aula).</li>
-                          <li><strong>Cadastro de Salas Especiais (Laboratórios, Quadras, etc):</strong> Você pode cadastrar ambientes de infraestrutura (Laboratório de Informática, Quadra de Esportes, Sala de Artes) no botão "Adicionar Sala Especial". Estas salas não "pertencem" a alunos fixos, mas são utilizadas pelas turmas de modo rotativo.
-                            <ul className="list-[circle] pl-4 mt-1 space-y-1">
-                              <li><strong>Cores Customizadas:</strong> Atribua uma cor ao laboratório para fácil distinção visual na view de Horários.</li>
-                              <li><strong>Visualização Isolada:</strong> No módulo de Horários, alternei a visualização para "Ver Salas Especiais" e você terá um calendário focado apenas na ocupação de todos os laboratórios cadastrados, verificando conflitos de infraestrutura.</li>
-                            </ul>
-                          </li>
-                          <li><strong>Vinculação com Disciplinas:</strong> No módulo de Disciplinas, você poderá marcar uma matéria (ex: Educação Física) para exigir ou utilizar essas Salas Especiais (ex: Quadra). O gerador de horários usará esta infraestrutura automaticamente para espelhar a aula e ocupar a sala.</li>
+                          <li><strong>Turmas Regulares:</strong> Cadastre com a respectiva quantidade formativa do turno englobando o teto e a extensão acadêmica.</li>
+                          <li><strong>Cadastro de Salas Especiais:</strong> Ambientes de alta infraestrutura flutuante que funcionam nos três turnos da instituição como Laboratórios, Quadras de Esportes, entre outros. O seu funcionamento atinge "status ocupado" permitindo interceção sem que seja interpretada a lógica de choque em disciplinas (duas aulas no mesmo laboratório causarão conflito de espaço).</li>
+                          <li>Atribua cores vivas diferentes a infraestrutura especial permitindo ao leitor humano acompanhar de forma relacional dentro da emissão da tela onde está acontecendo uma eventual sobreposição letiva na interface dos "Gerentes de Conflitos".</li>
                         </ul>
                       </div>
                     </div>
@@ -1306,12 +1320,12 @@ export default function DashboardLayout() {
                       </h4>
                       <div className="space-y-3 text-xs text-slate-600 font-sans leading-relaxed">
                         <p>
-                          O módulo de matrizes armazena a essência acadêmica e alicerça bloqueios cruciais limitantes das metodologias (séries iniciais não podem ter turmas de Sociologia se bloqueadas via menu de edições).
+                          O módulo base armazena as dependências teóricas de ensinos e rege todo a volumetria que guiará a demanda matemática da geração computacional final da grade.
                         </p>
                         <ul className="list-disc pl-5 space-y-1.5 font-sans">
-                          <li><strong>Restrições de Séries:</strong> Ensino fundamental II não deverá obter as grades típicas limitadas ao nível médio. Selecione as matrizes no ato de inserção. </li>
-                          <li><strong>Vínculo Específico (Lista Fechada):</strong> Insira um itinerário que existe apenas em uma turma especial? Ative checkboxes de whitelisting marcando as turmas compatíveis, isolando-as de distribuições generalistas feitas pelo Gerador.</li>
-                          <li><strong>Customização Carga Horária:</strong> Na interface de aulas esperadas da disciplina, indique quantas matérias em janelas aquela turma precisa semanalmente.</li>
+                          <li><strong>Carga Horária e Customização Excepcional:</strong> Você molda quantas janelas representativas cada disciplina contém numa base global. Além de flexibilizar uma quantidade "diferenciada" permitindo o módulo injetar que a turma B possua 2 tempos deste componente, enquanto que nativamente uma distribuição das turmas da Manhã consuma sempre 3 horários. </li>
+                          <li><strong>Exigências por Infraestrutura (Salas):</strong> Declare obrigatoriedades vinculativas indicando que "Robótica" será espelhada exaustivamente apenas para Laboratório Informática 1, impedindo cruzamentos indesejados nas salas não-equipadas da central regular.</li>
+                          <li><strong>Teto Disciplinar e Restrições de Níveis:</strong> Exilia-se as disciplinas específicas apenas entre Fundamental e/ou Médio, evitando choque em filtragens do formulário ou permitindo que componentes itinerários se restrinjam 1 ou 2 grupos alvos especiais selecionados no cardápio flutuante local.</li>
                         </ul>
                       </div>
                     </div>
@@ -1321,11 +1335,11 @@ export default function DashboardLayout() {
                     <div className="space-y-4 animate-in fade-in duration-200">
                       <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2 border-b-2 border-slate-100 pb-2">
                         <FileText className="w-4 h-4 text-orange-600 px-0.5" />
-                        6. Módulo de Atas de Reunião Escolar
+                        6. Módulo Auxiliar: Emissor de Atas
                       </h4>
                       <div className="space-y-3 text-xs text-slate-600 font-sans leading-relaxed">
                         <p>
-                          Um gerenciador auxiliar textual criado com padrões oficiais para agilizar emissão de documentações comprobatórias de atos legais, conselhos de avaliações, pautas diárias ou assembleias. O documento gera automaticamente formatação exigida em impressões de atas fiscais e armazena rasconhos permanentes nos navegadores locais ou via download backup em extensão JSON.
+                          Gerenciador de documentos burocráticos textuais criado para secretarias extraírem redações formatadas oficias (leis e atas escolares normatizadas) otimizando impressões e gerando registros rascunho de conselhos rotineiros. Salvamento interno integrado e exportações independentes.
                         </p>
                       </div>
                     </div>

@@ -1961,7 +1961,12 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     // 1. Direct whitelist of specific Turmas (if populated)
     if (S.allowedTurmaIds && S.allowedTurmaIds.length > 0) {
       if (!S.allowedTurmaIds.includes(TId)) {
-        return { workload: 0, classWorkload: 0, labWorkload: 0 };
+        // Bypass for 6th grade redação and leitura
+        const is6thGrade = T.name.includes('6') || T.name.includes('6º');
+        const isRedacaoLeitura = subjectNameLower.includes('redação') || subjectNameLower.includes('redacao') || subjectNameLower.includes('leitura');
+        if (!(isFundamental && is6thGrade && isRedacaoLeitura)) {
+          return { workload: 0, classWorkload: 0, labWorkload: 0 };
+        }
       }
     }
 
@@ -2021,7 +2026,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       }
     } else {
       // Fallback rule for standard unconfigured legacy courses: Marketing is strictly for specialized classes: 1ºB, 2ºB, 3ºB
-      if (subjectNameLower.includes('marketing')) {
+      if (subjectNameLower.includes('marketing') || subjectNameLower.includes('análise de mercado') || subjectNameLower.includes('analise de mercado')) {
         const hasExplicitConfig = S.customWorkloads?.[TId] !== undefined && S.customWorkloads[TId] > 0;
         const isAllowedMarketingTurma = /1.*B/i.test(turmaNameUpper) || 
                                        /2.*B/i.test(turmaNameUpper) || 
@@ -2033,6 +2038,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         if (!hasExplicitConfig && !isAllowedMarketingTurma) {
           return { workload: 0, classWorkload: 0, labWorkload: 0 };
         }
+      }
+      
+      if (subjectNameLower.includes('história do paraná') || subjectNameLower.includes('historia do parana')) {
+        return { workload: 0, classWorkload: 0, labWorkload: 0 };
       }
     }
 
@@ -2064,6 +2073,27 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
     const workload = custom ?? defaultWorkload;
     
+    let finalClassWorkload = S.classWorkload ?? 0;
+    
+    // Explicit 6th grade overrides
+    if (T.name.includes('6') || T.name.includes('6º')) {
+      if (subjectNameLower === 'português' || subjectNameLower === 'portugues' || subjectNameLower === 'língua portuguesa') {
+        if (workload === 5 && !custom) {
+          return { workload: 4, classWorkload: 4, labWorkload: S.labWorkload ?? 0 };
+        }
+      }
+      if (subjectNameLower === 'matemática' || subjectNameLower === 'matematica') {
+        if (workload === 5 && !custom) {
+          return { workload: 4, classWorkload: 4, labWorkload: S.labWorkload ?? 0 };
+        }
+      }
+      if (subjectNameLower.includes('redação') || subjectNameLower.includes('redacao') || subjectNameLower.includes('leitura')) {
+         if (!custom && workload === 0) {
+           return { workload: 1, classWorkload: 1, labWorkload: 0 };
+         }
+      }
+    }
+
     // Proportional down-scale for lab workload if workload changed
     let labWorkload = S.labWorkload ?? 0;
     let classWorkload = S.classWorkload ?? 0;
@@ -3869,7 +3899,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         } else {
           // Move room slot (represent current columns)
           updatedSchedules[targetRoomId][targetSlotId] = { ...sourceSlotData };
-          delete updatedSchedules[sourceRoomId][sourceSlotId];
+          if (targetSlotId !== sourceSlotId || targetRoomId !== sourceRoomId) {
+            delete updatedSchedules[sourceRoomId][sourceSlotId];
+          }
 
           // Update physical class
           if (sourceClassId) {
@@ -3878,7 +3910,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               subjectId: sourceSlotData.subjectId,
               associatedRoomId: targetRoomId
             };
-            delete updatedSchedules[sourceClassId][sourceSlotId];
+            if (targetSlotId !== sourceSlotId) {
+              delete updatedSchedules[sourceClassId][sourceSlotId];
+            }
           }
         }
       } else {
@@ -3899,7 +3933,11 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               ...sourceSlotData,
               associatedTurmaId: targetTurmaId
             };
-            delete updatedSchedules[sourceRoomId][sourceSlotId];
+            if (targetSlotId !== sourceSlotId || targetTurmaId !== sourceTurmaId) {
+              if (sourceRoomId !== targetRoomId) {
+                delete updatedSchedules[sourceRoomId][sourceSlotId];
+              }
+            }
           }
           if (targetRoomId) {
              updatedSchedules[targetRoomId][sourceSlotId] = {
@@ -3908,13 +3946,17 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
              };
              // If target room is not the same as source room, or source didn't occupy the slot we just wrote to
              if (targetRoomId !== sourceRoomId) {
-               delete updatedSchedules[targetRoomId][targetSlotId];
+               if (targetSlotId !== sourceSlotId || targetTurmaId !== sourceTurmaId) {
+                 delete updatedSchedules[targetRoomId][targetSlotId];
+               }
              }
           }
         } else {
           // Move
           updatedSchedules[targetTurmaId][targetSlotId] = sourceSlotData;
-          delete updatedSchedules[sourceTurmaId][sourceSlotId];
+          if (targetSlotId !== sourceSlotId || targetTurmaId !== sourceTurmaId) {
+            delete updatedSchedules[sourceTurmaId][sourceSlotId];
+          }
 
           // Move room mirror
           if (sourceRoomId) {
@@ -3922,7 +3964,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               ...sourceSlotData,
               associatedTurmaId: targetTurmaId
             };
-            delete updatedSchedules[sourceRoomId][sourceSlotId];
+            if (targetSlotId !== sourceSlotId) {
+              delete updatedSchedules[sourceRoomId][sourceSlotId];
+            }
           }
         }
       }
@@ -4115,9 +4159,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                if (!occupantSubjectId) return false;
 
                const occupantOtherSlots = Object.entries(nextSchedules[occupantId] || {})
-                 .filter(([otherSId, slot]) => slot.subjectId === occupantSubjectId && otherSId !== sId && !slot.associatedRoomId);
+                 .filter(([otherSId, slot]: [string, any]) => slot && slot.subjectId === occupantSubjectId && otherSId !== sId && !slot.associatedRoomId);
                  
-               for (const [otherSId, slot] of occupantOtherSlots) {
+               for (const [otherSId, slotAsAny] of occupantOtherSlots) {
+                  const slot: any = slotAsAny;
                   const isRoomBusyThere = schedules[activeRoomId]?.[otherSId] || nextSchedules[activeRoomId]?.[otherSId];
                   if (!isRoomBusyThere) {
                      // Can swap!
