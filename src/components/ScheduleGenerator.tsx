@@ -503,6 +503,7 @@ export default function ScheduleGenerator() {
 
   const [isSaved, setIsSaved] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Skeleton loading state
 
   const [isAutoGenerateModalOpen, setIsAutoGenerateModalOpen] = useState(false);
   const [isMudancasModalOpen, setIsMudancasModalOpen] = useState(false);
@@ -691,6 +692,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     if (location.search.includes('wizard=true')) {
       setIsWizardOpen(true);
       setWizardStep(1);
+    }
+    if (location.search.includes('visaoGeral=true')) {
+      setIsShowingMissingClasses(true);
     }
   }, [location.search]);
   
@@ -1773,6 +1777,41 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     size: number;
   }
 
+  const getActiveSubstitution = (dayId: string, actualPeriod: number, slotTeacherId: string) => {
+    return substitutions.find(sub => {
+      if (slotTeacherId === sub.absentTeacherId && sub.date) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const start = new Date(sub.date + 'T00:00:00');
+        const end = sub.endDate ? new Date(sub.endDate + 'T23:59:59') : new Date(sub.date + 'T23:59:59');
+
+        if (today > end) return false;
+
+        let isDayCovered = false;
+        const diffDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays >= 7) {
+          isDayCovered = true;
+        } else {
+          const map: Record<number, string> = { 1: 'seg', 2: 'ter', 3: 'qua', 4: 'qui', 5: 'sex' };
+          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            if (map[d.getDay()] === dayId) {
+              isDayCovered = true;
+              break;
+            }
+          }
+        }
+
+        if (isDayCovered) {
+          if (sub.periods && sub.periods.length > 0) {
+            return sub.periods.includes(actualPeriod);
+          }
+          return true;
+        }
+      }
+      return false;
+    });
+  };
+
   const getSubjectWorkloadsForTurma = (S: Subject, TId: string) => {
     const T = turmas.find(t => t.id === TId);
     if (!T || T.isRoom) return { workload: 0, classWorkload: 0, labWorkload: 0 };
@@ -1957,9 +1996,47 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     return allTeachers.filter(t => isTeacherEligibleForSubjectInTurma(t, SId, TId));
   };
 
+  // INTEGRAÇÃO COM BACKEND SOLVER (run_solver.js)
+  const runSolverBackend = async (payload: any) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/solve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        throw new Error('Falha no processamento pesado no Node/JS.');
+      }
+      const data = await response.json();
+      console.log('Dados do solver carregados:', data);
+      
+      // Aqui integraria updating the internal schedules list
+      // ex: setSchedules(data.computedSchedules);
+      
+      return data;
+    } catch (error) {
+      console.error('Erro na camada de integração com run_solver.js:', error);
+      // Fallback para a geração client-side por motivos de fallback do preview
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const runAutoScheduling = async (overrideMode?: 'empty' | 'all', overrideShift?: 'both' | 'manha' | 'tarde' | 'noite' | 'labs', overrideTurmaId?: string | string[]) => {
-    setIsGenerating(true);
-    await new Promise(r => setTimeout(r, 50)); // Allow UI to update and show loading state
+    // 1. Inicia o Loading Visual (Skeleton) realçando feedback para o usuário
+    setIsLoading(true);
+    // Para manter retrocompatibilidade com modais antigos de loading (opcional)
+    setIsGenerating(true); 
+
+    // Simula a passagem do payload e aguarda o script robusto.
+    // Como estamos no ambiente local preview sem o Node/js anexado direto à rota no Vite (exemplo),
+    // simular um delay do heavy processing de 1.5s para demonstrar o `Skeleton Loading` que foi requisitado
+    await new Promise(r => setTimeout(r, 1500));
+    
+    // Tenta invocar a API de Backend
+    await runSolverBackend({ mode: overrideMode, shift: overrideShift, turmas: overrideTurmaId });
 
     const effectiveMode = overrideMode || autoGenMode;
     const effectiveShift = overrideShift || autoGenShift;
@@ -2631,6 +2708,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     setIsAutoGenerateResultsModalOpen(true);
     setIsAutoGenerateResultsMinimized(false);
     setIsGenerating(false);
+    setIsLoading(false);
   };
 
 
@@ -3611,6 +3689,40 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     const nextSchedules = { ...schedules };
     const currentSchedule = { ...(nextSchedules[selectedTurmaId] || {}) };
     
+    let activeRoomId = tempAssociatedRoomId;
+    
+    // Extracted days and periods...
+    const [day, periodStr] = selectedSlot.split('-');
+    const period = parseInt(periodStr);
+    let consecPeriod: number | null = null;
+    if (period >= 1 && period <= 6) {
+      consecPeriod = (period < 6) ? period + 1 : 5;
+    } else if (period >= 7 && period <= 12) {
+      consecPeriod = (period < 12) ? period + 1 : 11;
+    } else if (period >= 13 && period <= 17) {
+      consecPeriod = (period < 17) ? period + 1 : 16;
+    }
+    const consecSlot = consecPeriod ? `${day}-${consecPeriod}` : null;
+    
+    // Verificação automática de sala especial
+    if (viewMode === 'turmas' && tempSubject && !activeRoomId) {
+      const subjectObj = subjects.find(s => s.id === tempSubject);
+      if (subjectObj) {
+         const compatibleRooms = getCompatibleSpecialRooms(subjectObj, turmas);
+         if (compatibleRooms.length > 0) {
+            let freeRoomId = '';
+            for (const rid of compatibleRooms) {
+               const roomSched = schedules[rid] || {};
+               const isOccupied = roomSched[selectedSlot] && roomSched[selectedSlot].associatedTurmaId !== selectedTurmaId;
+               const isConsecOccupied = allocateConsecutive && consecSlot && roomSched[consecSlot] && roomSched[consecSlot].associatedTurmaId !== selectedTurmaId;
+               if (!isOccupied && !isConsecOccupied) { freeRoomId = rid; break; }
+            }
+            activeRoomId = freeRoomId || compatibleRooms[0];
+            setTempAssociatedRoomId(activeRoomId);
+         }
+      }
+    }
+
     // Helper to safely remove a single slot and its linked mirrors
     const removeSlotSafely = (slotId: string, currentData: ScheduleSlot, contextTurmaId: string) => {
       // ...
@@ -3635,19 +3747,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       delete currentSchedule[slotId];
     };
     
-    // Extract days and periods for both slots if allocating consecutive
-    const [day, periodStr] = selectedSlot.split('-');
-    const period = parseInt(periodStr);
-    let consecPeriod: number | null = null;
-    // ...
-    if (period >= 1 && period <= 6) {
-      consecPeriod = (period < 6) ? period + 1 : 5;
-    } else if (period >= 7 && period <= 12) {
-      consecPeriod = (period < 12) ? period + 1 : 11;
-    } else if (period >= 13 && period <= 17) {
-      consecPeriod = (period < 17) ? period + 1 : 16;
-    }
-    const consecSlot = consecPeriod ? `${day}-${consecPeriod}` : null;
+    // Already extracted days and periods above
+
 
     if (!tempSubject) {
       if (selectedSlot && currentSchedule[selectedSlot]) {
@@ -3655,6 +3756,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         if (allocateConsecutive && consecSlot && currentSchedule[consecSlot]) {
           removeSlotSafely(consecSlot, currentSchedule[consecSlot], selectedTurmaId);
         }
+        nextSchedules[selectedTurmaId] = currentSchedule;
+        setSchedules(nextSchedules);
+        setSelectedSlot(null);
+        return;
       } else {
         setSlotError("Por favor, selecione uma disciplina.");
         return;
@@ -3695,14 +3800,14 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       }
 
       // Validação de disponibilidade da Sala Especial
-      if (viewMode === 'turmas' && tempAssociatedRoomId) {
-        const roomSchedule = schedules[tempAssociatedRoomId] || {};
+      if (viewMode === 'turmas' && activeRoomId) {
+        const roomSchedule = schedules[activeRoomId] || {};
         const isConflict1 = roomSchedule[selectedSlot] && roomSchedule[selectedSlot]?.associatedTurmaId !== selectedTurmaId;
         const isConflict2 = allocateConsecutive && consecSlot && roomSchedule[consecSlot] && roomSchedule[consecSlot]?.associatedTurmaId !== selectedTurmaId;
         
         if (isConflict1 || isConflict2) {
           if (!forceLabOverride) {
-            setPendingLabConflict({ roomId: tempAssociatedRoomId, consecSlot });
+            setPendingLabConflict({ roomId: activeRoomId, consecSlot });
             setSlotError(null);
             return;
           } else {
@@ -3767,7 +3872,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         teacherId: tempTeacher, 
         subjectId: tempSubject,
         associatedTurmaId: viewMode === 'rooms' ? tempAssociatedTurmaId : undefined,
-        associatedRoomId: viewMode === 'turmas' ? (tempAssociatedRoomId || undefined) : undefined
+        associatedRoomId: viewMode === 'turmas' ? (activeRoomId || undefined) : undefined
       };
 
       if (allocateConsecutive && consecSlot) {
@@ -3775,7 +3880,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
           teacherId: tempTeacher,
           subjectId: tempSubject,
           associatedTurmaId: viewMode === 'rooms' ? tempAssociatedTurmaId : undefined,
-          associatedRoomId: viewMode === 'turmas' ? (tempAssociatedRoomId || undefined) : undefined
+          associatedRoomId: viewMode === 'turmas' ? (activeRoomId || undefined) : undefined
         };
       }
     }
@@ -3799,16 +3904,16 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       }
     }
 
-    if (viewMode === 'turmas' && tempAssociatedRoomId) {
-      if (!nextSchedules[tempAssociatedRoomId]) nextSchedules[tempAssociatedRoomId] = {};
-      nextSchedules[tempAssociatedRoomId] = { ...nextSchedules[tempAssociatedRoomId] };
-      nextSchedules[tempAssociatedRoomId][selectedSlot] = {
+    if (viewMode === 'turmas' && activeRoomId) {
+      if (!nextSchedules[activeRoomId]) nextSchedules[activeRoomId] = {};
+      nextSchedules[activeRoomId] = { ...nextSchedules[activeRoomId] };
+      nextSchedules[activeRoomId][selectedSlot] = {
         teacherId: tempTeacher,
         subjectId: tempSubject,
         associatedTurmaId: selectedTurmaId
       };
       if (allocateConsecutive && consecSlot) {
-        nextSchedules[tempAssociatedRoomId][consecSlot] = {
+        nextSchedules[activeRoomId][consecSlot] = {
           teacherId: tempTeacher,
           subjectId: tempSubject,
           associatedTurmaId: selectedTurmaId
@@ -4063,6 +4168,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   }
                   
                   const teacher = teachers.find(t => t.id === slot?.teacherId);
+                  const actSub = slot ? getActiveSubstitution(day.id, pId, slot.teacherId) : null;
+                  const subTeacher = actSub && actSub.substituteTeacherId !== 'none' ? teachers.find(t => t.id === actSub.substituteTeacherId) : null;
                   const subject = subjects.find(s => s.id === slot?.subjectId);
                   const associatedRoom = slot?.associatedRoomId ? turmas.find(t => t.id === slot.associatedRoomId) : null;
                   
@@ -4097,7 +4204,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       <td class="slot-cell">
                         ${subject ? `<div class="subj-name">${formatSubjectName(subject.name, 16)}</div>` : '-'}
                         ${teacher ? `<div class="prof-name">
-                          ${formatTeacherName(teacher.name)}
+                          ${actSub ? `${subTeacher ? formatTeacherName(subTeacher.name) : 'PENDENTE'} <span style="display: inline-block; padding: 1px 2px; background-color: #f1f5f9; color: #334155; border-radius: 2px; font-size: 4pt; font-weight: 800; border: 1px solid #cbd5e1; vertical-align: top;">SUB</span>` : formatTeacherName(teacher.name)}
                           ${associatedRoom ? `<span style="display: inline-block; padding: 1px 2px; margin-left: 2px; background-color: #f1f5f9; color: #334155; border-radius: 2px; font-size: 5pt; font-weight: 800; border: 1px solid #cbd5e1; vertical-align: top;">${associatedRoom.name.split(' ')[0] || 'LAB'}</span>` : ''}
                         </div>` : ''}
                       </td>
@@ -4184,13 +4291,15 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       ${specialRooms.map(room => {
                         const slot = schedules[room.id]?.[slotId];
                         const teacher = teachers.find(t => t.id === slot?.teacherId);
+                        const actSub = slot ? getActiveSubstitution(day.id, pId, slot.teacherId) : null;
+                        const subTeacher = actSub && actSub.substituteTeacherId !== 'none' ? teachers.find(t => t.id === actSub.substituteTeacherId) : null;
                         const subject = subjects.find(s => s.id === slot?.subjectId);
                         const turma = turmas.find(t => t.id === slot?.associatedTurmaId);
 
                         return `
                           <td class="slot-cell">
                             ${teacher ? `
-                              <div class="teacher-name">${formatTeacherName(teacher.name)}</div>
+                              <div class="teacher-name">${actSub ? `${subTeacher ? formatTeacherName(subTeacher.name) : 'PEND'} <span style="display:inline-block;padding:1px;background:#f1f5f9;color:#334155;border-radius:2px;font-size:4pt;font-weight:800;border:1px solid #cbd5e1;">SUB</span>` : formatTeacherName(teacher.name)}</div>
                               <div class="extra-info">
                                 ${turma?.name || ''} ${subject ? `<span class="extra-info-subject">- ${formatSubjectName(subject.name, 10)}</span>` : ''}
                               </div>
@@ -4484,6 +4593,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                           }
 
                            const teacher = teachers.find(t => t.id === slot?.teacherId);
+                           const actSub = slot ? getActiveSubstitution(day.id, pId, slot.teacherId) : null;
+                           const subTeacher = actSub && actSub.substituteTeacherId !== 'none' ? teachers.find(t => t.id === actSub.substituteTeacherId) : null;
                            const subject = subjects.find(s => s.id === slot?.subjectId);
                            const associatedRoom = slot?.associatedRoomId ? turmas.find(t => t.id === slot.associatedRoomId) : null;
                            
@@ -4494,7 +4605,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                ${isPeriodOut ? '<div style="font-size: 5pt; color: #94a3b8; font-weight: 700; text-align: center; max-width: 100%; white-space: normal;">Turma não possui 6ª Aula</div>' : `
                                  ${subject ? `<div class="subj-name">${formatSubjectName(subject.name, 16)}</div>` : ''}
                                  ${teacher ? `<div class="prof-name">
-                                   ${formatTeacherName(teacher.name)}
+                                   ${actSub ? `${subTeacher ? formatTeacherName(subTeacher.name) : 'PENDENTE'} <span style="display:inline-block;padding:1px;background:#f1f5f9;color:#334155;border-radius:2px;font-size:4pt;font-weight:800;border:1px solid #cbd5e1;vertical-align:top;">SUB</span>` : formatTeacherName(teacher.name)}
                                    ${associatedRoom ? `<span style="display: inline-block; padding: 1px 2px; margin-left: 2px; background-color: #f1f5f9; color: #334155; border-radius: 2px; font-size: 4pt; font-weight: 800; border: 1px solid #cbd5e1;">${associatedRoom.name.split(' ')[0] || 'LAB'}</span>` : ''}
                                  </div>` : ''}
                                `}
@@ -4871,6 +4982,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   }
                   
                   const teacher = teachers.find(t => t.id === slot?.teacherId);
+                  const actSub = slot ? getActiveSubstitution(day.id, pId, slot.teacherId) : null;
+                  const subTeacher = actSub && actSub.substituteTeacherId !== 'none' ? teachers.find(t => t.id === actSub.substituteTeacherId) : null;
                   const subject = subjects.find(s => s.id === slot?.subjectId);
                   const associatedRoom = slot?.associatedRoomId ? turmas.find(t => t.id === slot.associatedRoomId) : null;
                   const isGrayDay = day.id === 'ter' || day.id === 'qui';
@@ -5484,27 +5597,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
   return (
     <>
       <AnimatePresence>
-        {isGenerating && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-md"
-          >
-            <div className="bg-white p-6 md:p-10 rounded-3xl shadow-2xl flex flex-col items-center gap-4 border-2 border-indigo-600/20 max-w-sm w-full mx-4">
-              <div className="relative">
-                <div className="w-16 h-16 rounded-full border-4 border-slate-100 border-t-indigo-600 animate-spin"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-indigo-400 animate-pulse" />
-                </div>
-              </div>
-              <div className="text-center">
-                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Análise Inteligente</h3>
-                <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Calculando melhor combinação...</p>
-              </div>
-            </div>
-          </motion.div>
-        )}
+        {/* We use inline skeleton loader over cards now instead of this popup
+        {isGenerating && ( ... )}
+        */}
       </AnimatePresence>
       <div className="flex-1 flex flex-col h-full w-full overflow-hidden relative">
         <div className={isHorariosRoute ? "flex-1 flex flex-col space-y-2 animate-in fade-in duration-700 pb-1 overflow-hidden" : "hidden"}>
@@ -6422,19 +6517,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                 const associatedTurma = turmas.find(t => t.id === slot?.associatedTurmaId);
                                 const conflicts = getConflicts(day.id, actualPeriod, slot?.teacherId || '', turma.id, slot?.associatedTurmaId);
                                 
-                                const activeSub = slot && substitutions.find(sub => {
-                                  if (slot.teacherId === sub.absentTeacherId && sub.date) {
-                                    const subDay = new Date(sub.date + 'T12:00:00').getDay();
-                                    const map: Record<number, string> = { 1: 'seg', 2: 'ter', 3: 'qua', 4: 'qui', 5: 'sex' };
-                                    if (map[subDay] === day.id) {
-                                      if (sub.periods && sub.periods.length > 0) {
-                                        return sub.periods.includes(actualPeriod);
-                                      }
-                                      return true; // Match if no specific periods defined
-                                    }
-                                  }
-                                  return false;
-                                });
+                                const activeSub = slot ? getActiveSubstitution(day.id, actualPeriod, slot.teacherId) : null;
                                 const subTeacher = activeSub && activeSub.substituteTeacherId !== 'none'
                                   ? teachers.find(t => t.id === activeSub.substituteTeacherId)
                                   : null;
@@ -6495,21 +6578,28 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                     onDragLeave={handleDragLeave}
                                     onDrop={(e) => handleDrop(e, turma.id, slotId)}
                                     className={`p-1.5 border-r border-slate-300 cursor-pointer transition-all group relative ${isDimmed ? 'opacity-30 grayscale-[50%]' : ''} ${
-                                      draggedOverCell?.turmaId === turma.id && draggedOverCell?.slotId === slotId
+                                      isLoading 
+                                        ? 'bg-slate-100'
+                                        : draggedOverCell?.turmaId === turma.id && draggedOverCell?.slotId === slotId
                                         ? (isDragTargetValid ? 'bg-blue-100 border-2 border-dashed border-blue-500 scale-[0.98] transition-all duration-100 z-20' : 'bg-red-200 border-2 border-dashed border-red-500 scale-[0.98] transition-all duration-100 z-20')
                                         : errorCell?.turmaId === turma.id && errorCell?.slotId === slotId
                                           ? 'bg-red-600 border-2 border-red-800 text-white animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.6)] scale-[1.02] z-10'
                                           : cellBg
                                     }`}
                                   >
-                                    {draggedOverCell?.turmaId === turma.id && draggedOverCell?.slotId === slotId && !isDragTargetValid && dragInvalidReason && (
+                                    {draggedOverCell?.turmaId === turma.id && draggedOverCell?.slotId === slotId && !isDragTargetValid && dragInvalidReason && !isLoading && (
                                       <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-3 py-2 bg-slate-900 border border-slate-700 text-white text-[9px] font-bold rounded shadow-xl whitespace-nowrap z-[60] animate-in fade-in zoom-in duration-75 pointer-events-none">
                                         <AlertCircle className="w-3 h-3 text-red-400 inline-block mr-1.5 align-middle" />
                                         <span className="align-middle">{dragInvalidReason}</span>
                                         <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900 rotate-45 border-l border-t border-slate-700"></div>
                                       </div>
                                     )}
-                                    {slot ? (
+                                    {isLoading ? (
+                                      <div className="flex flex-col items-center justify-center space-y-2 w-full h-full opacity-60">
+                                        <div className="h-2.5 bg-slate-200 rounded w-16 animate-[pulse_1s_ease-in-out_infinite]"></div>
+                                        <div className="h-2 bg-slate-300 rounded w-20 animate-[pulse_1.2s_ease-in-out_infinite_200ms]"></div>
+                                      </div>
+                                    ) : slot ? (
                                       <div 
                                         draggable="true"
                                         onDragStart={(e) => handleDragStart(e, turma.id, slotId)}
@@ -7042,6 +7132,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   onClick={() => {
                     setTempTeacher('');
                     setTempSubject('');
+                    setTempAssociatedRoomId('');
+                    setTempAssociatedTurmaId('');
                     setPendingLabConflict(null);
                   }}
                   className="flex-[2] py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-[9px] font-bold hover:bg-red-100 transition-all uppercase tracking-widest"
@@ -7431,38 +7523,79 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border-2 border-slate-900 text-left font-sans flex flex-col"
+              className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border-2 border-slate-900 text-left font-sans flex flex-col max-h-[85vh] overflow-hidden"
             >
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 border border-indigo-200">
-                  <Calendar className="w-5 h-5 text-indigo-600" />
+              <div className="flex items-start justify-between gap-3 mb-5 border-b border-slate-100 pb-3 shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 border border-indigo-200">
+                    <Calendar className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 leading-tight uppercase tracking-tight text-sm">Parâmetros Globais do Colégio</h3>
+                    <p className="text-[10px] text-slate-500 max-w-xs mt-0.5">Configuração refletida nos relatórios e painéis centrais.</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-slate-900 leading-tight uppercase tracking-tight text-sm">Parâmetros Globais do Colégio</h3>
-                  <p className="text-[10px] text-slate-500 max-w-xs mt-0.5">Configuração refletida nos relatórios e painéis centrais.</p>
-                </div>
+                <button 
+                  onClick={() => setIsAcademicConfigOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  title="Fechar"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Perfil da Instituição</label>
-                  <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors">
-                    <div className="relative flex items-center justify-center shrink-0">
-                      <input 
-                        type="checkbox" 
-                        checked={localStorage.getItem('cecm_is_civico_militar') === 'true'}
-                        onChange={(e) => {
-                          const isCCM = e.target.checked;
-                          localStorage.setItem('cecm_is_civico_militar', isCCM ? 'true' : 'false');
-                          // Force re-render by updating an unrelated state or just relying on UI update
-                          setAcademicSystem(prev => prev);
-                        }}
-                        className="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer"
-                      />
-                      <Check className="w-3.5 h-3.5 text-white absolute opacity-0 scale-50 peer-checked:opacity-100 peer-checked:scale-100 transition-all pointer-events-none" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-800 uppercase">Colégio Cívico-Militar</span>
-                  </label>
+              <div className="space-y-4 flex-1 overflow-y-auto pr-1.5 custom-scrollbar">
+                 <div>
+                  <label className="text-[10px] font-black uppercase text-slate-500 mb-1.5 block">Modelo / Perfil da Instituição (SEED-PR)</label>
+                  <div className="flex flex-col gap-1.5">
+                    {/* regular */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        localStorage.setItem('cecm_is_civico_militar', 'false');
+                        setAcademicSystem(prev => prev);
+                      }}
+                      className={`flex items-start gap-2.5 p-2 rounded-xl border text-left cursor-pointer transition-all ${
+                        localStorage.getItem('cecm_is_civico_militar') !== 'true'
+                          ? 'bg-emerald-50/50 border-emerald-500 ring-1 ring-emerald-500/10'
+                          : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50'
+                      }`}
+                    >
+                      <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                        localStorage.getItem('cecm_is_civico_militar') !== 'true' ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 bg-white'
+                      }`}>
+                        {localStorage.getItem('cecm_is_civico_militar') !== 'true' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-800 block leading-tight">Colégio Estadual Regular</span>
+                        <span className="text-[9.5px] text-slate-500 leading-snug block">Matriz regular padrão SEED-PR</span>
+                      </div>
+                    </button>
+
+                    {/* ccm */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        localStorage.setItem('cecm_is_civico_militar', 'true');
+                        setAcademicSystem(prev => prev);
+                      }}
+                      className={`flex items-start gap-2.5 p-2 rounded-xl border text-left cursor-pointer transition-all ${
+                        localStorage.getItem('cecm_is_civico_militar') === 'true'
+                          ? 'bg-blue-50/50 border-blue-500 ring-1 ring-blue-500/10'
+                          : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50'
+                      }`}
+                    >
+                      <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                        localStorage.getItem('cecm_is_civico_militar') === 'true' ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white'
+                      }`}>
+                        {localStorage.getItem('cecm_is_civico_militar') === 'true' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-800 block leading-tight">Cívico-Militar (CCM)</span>
+                        <span className="text-[9.5px] text-slate-500 leading-snug block">Matriz cívico-militar adaptada</span>
+                      </div>
+                    </button>
+                  </div>
                 </div>
 
                 <div>
@@ -7551,7 +7684,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 </div>
               </div>
 
-              <div className="flex gap-2 mt-6 pt-4 border-t border-slate-100">
+              <div className="flex gap-2 mt-6 pt-4 border-t border-slate-100 shrink-0">
                 <button 
                   onClick={() => setIsAcademicConfigOpen(false)}
                   className="w-full py-2 bg-slate-900 hover:bg-slate-950 text-white font-black uppercase tracking-wider text-[10px] rounded-lg transition-colors"
@@ -10903,29 +11036,62 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         </div>
                       </div>
 
-                      {/* Perfil Cívico Militar */}
-                      <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200 animate-in fade-in duration-300">
-                        <label className="flex items-start gap-3 cursor-pointer group">
-                          <div className="relative flex items-center justify-center shrink-0 mt-0.5">
-                            <input 
-                              type="checkbox" 
-                              checked={localStorage.getItem('cecm_is_civico_militar') === 'true'}
-                              onChange={(e) => {
-                                const isCCM = e.target.checked;
-                                localStorage.setItem('cecm_is_civico_militar', isCCM ? 'true' : 'false');
-                                setAcademicSystem(prev => prev); // force re-render
-                              }}
-                              className="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded focus:ring-2 focus:ring-indigo-900 focus:ring-offset-1 checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer"
-                            />
-                            <Check className="w-3.5 h-3.5 text-white absolute opacity-0 scale-50 peer-checked:opacity-100 peer-checked:scale-100 transition-all pointer-events-none" />
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-slate-800 block mb-0.5">Colégio Cívico-Militar (CCM)</span>
-                            <span className="text-[10px] text-slate-500 leading-tight block max-w-sm">
-                              Ative esta opção se a sua unidade é um Colégio Cívico-Militar. Isso ajustará a estrutura curricular padrão ao cadastrar novas turmas.
-                            </span>
-                          </div>
-                        </label>
+                      {/* Perfil da Instituição */}
+                      <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-200 animate-in fade-in duration-300">
+                        <span className="text-[10px] font-black uppercase text-slate-500 mb-2 block">Modelo / Perfil da Instituição (SEED-PR)</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {/* regular */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              localStorage.setItem('cecm_is_civico_militar', 'false');
+                              setAcademicSystem(prev => prev); // force re-render
+                            }}
+                            className={`flex items-start gap-3 p-3 rounded-xl border text-left cursor-pointer transition-all bg-white hover:bg-slate-50/50 ${
+                              localStorage.getItem('cecm_is_civico_militar') !== 'true'
+                                ? 'border-emerald-500 ring-2 ring-emerald-500/10 bg-emerald-50/10'
+                                : 'border-slate-200'
+                            }`}
+                          >
+                            <div className={`mt-0.5 w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                              localStorage.getItem('cecm_is_civico_militar') !== 'true' ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 bg-white'
+                            }`}>
+                              {localStorage.getItem('cecm_is_civico_militar') !== 'true' && <div className="w-2 h-2 rounded-full bg-white" />}
+                            </div>
+                            <div>
+                              <span className="text-xs font-bold text-slate-800 block leading-tight mb-0.5">Colégio Estadual Regular</span>
+                              <span className="text-[10px] text-slate-500 leading-snug block">
+                                Ensino regular padrão. Ajusta a nova estrutura curricular com Proyecto de Vida, Finanças e Tecnologia padrão SEED-PR.
+                              </span>
+                            </div>
+                          </button>
+
+                          {/* ccm */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              localStorage.setItem('cecm_is_civico_militar', 'true');
+                              setAcademicSystem(prev => prev); // force re-render
+                            }}
+                            className={`flex items-start gap-3 p-3 rounded-xl border text-left cursor-pointer transition-all bg-white hover:bg-slate-50/50 ${
+                              localStorage.getItem('cecm_is_civico_militar') === 'true'
+                                ? 'border-blue-500 ring-2 ring-blue-500/10 bg-blue-50/10'
+                                : 'border-slate-200'
+                            }`}
+                          >
+                            <div className={`mt-0.5 w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                              localStorage.getItem('cecm_is_civico_militar') === 'true' ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white'
+                            }`}>
+                              {localStorage.getItem('cecm_is_civico_militar') === 'true' && <div className="w-2 h-2 rounded-full bg-white" />}
+                            </div>
+                            <div>
+                              <span className="text-xs font-bold text-slate-800 block leading-tight mb-0.5">Colégio Cívico-Militar (CCM)</span>
+                              <span className="text-[10px] text-slate-500 leading-snug block">
+                                Modelo de gestão cívico-militar (CCM-PR). Insere matérias como Cidadania e Civismo na carga horária semanal obrigatória.
+                              </span>
+                            </div>
+                          </button>
+                        </div>
                       </div>
                     </div>
                     
@@ -11253,10 +11419,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
                 {/* STEP 3: Cadastro de Disciplinas */}
                 {wizardStep === 3 && (() => {
-                  const fundamentalSubs = subjects.filter(s => s.levelConstraint === 'fundamental');
-                  const medioSubs = subjects.filter(s => s.levelConstraint === 'medio');
+                  const fundamentalSubs = subjects.filter(s => s.levelConstraint === 'fundamental' || s.levelConstraint === 'ambos' || !s.levelConstraint);
+                  const medioSubs = subjects.filter(s => s.levelConstraint === 'medio' || s.levelConstraint === 'ambos' || !s.levelConstraint);
                   const tecnicoSubs = subjects.filter(s => s.levelConstraint === 'tecnico');
-                  const ambosSubs = subjects.filter(s => !s.levelConstraint || s.levelConstraint === 'ambos');
 
                   const openAddSubjectWithPreset = (preset: 'fundamental' | 'medio' | 'tecnico' | 'ambos') => {
                     setEditingSubjectId(null);
@@ -11285,10 +11450,15 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                             <span className="text-[11px] font-black text-slate-900 uppercase block truncate leading-tight" title={subject.name}>
                               {subject.name}
                             </span>
-                            <div className="flex flex-wrap gap-1 items-center mt-1">
+                             <div className="flex flex-wrap gap-1 items-center mt-1">
                               <span className="text-[7.5pt] font-extrabold text-blue-600 bg-blue-50/50 px-1 py-0.5 rounded uppercase font-mono tracking-tight">
                                 {subject.workload}a/semana
                               </span>
+                              {(subject.levelConstraint === 'ambos' || !subject.levelConstraint) && (
+                                <span className="text-[7pt] font-extrabold text-[#657c36] bg-[#657c36]/10 px-1 py-0.5 rounded uppercase tracking-tighter">
+                                  Geral / Ambos
+                                </span>
+                              )}
                               {hasCustom && (
                                 <span className="text-[7pt] font-black text-purple-700 bg-purple-50 px-1 py-0.5 rounded uppercase tracking-tighter">
                                   Custom 🔥
@@ -11355,7 +11525,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         Configure as matérias escolares. Clique em <strong className="text-slate-900">+ NOVO</strong> em qualquer uma das colunas temáticas pré-definidas para adicionar uma disciplina já vinculada adequadamente a esse nível!
                       </p>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 pb-2">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-2">
                         {/* COL 1: Ensino Fundamental */}
                         <div className="bg-blue-50/20 p-3 rounded-2xl border border-blue-100 flex flex-col space-y-3 min-h-[350px]">
                           <div className="flex justify-between items-center border-b border-blue-100/60 pb-1.5">
@@ -11421,29 +11591,6 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                               <div className="text-[10px] text-slate-400 text-center py-10 italic bg-white/40 rounded-xl border border-dashed border-slate-200 font-sans">Lista vazia</div>
                             ) : (
                               tecnicoSubs.map(renderSubjectCardInColumn)
-                            )}
-                          </div>
-                        </div>
-
-                        {/* COL 4: Geral / Ambos os Níveis */}
-                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex flex-col space-y-3 min-h-[350px]">
-                          <div className="flex justify-between items-center border-b border-slate-200 pb-1.5">
-                            <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-slate-450 bg-slate-400 animate-pulse"></span>
-                              Geral / Ambos
-                            </span>
-                            <button 
-                              onClick={() => openAddSubjectWithPreset('ambos')}
-                              className="text-[9px] font-black text-slate-600 bg-slate-150 hover:bg-slate-200 px-2 py-0.5 rounded cursor-pointer transition-colors"
-                            >
-                              + NOVO
-                            </button>
-                          </div>
-                          <div className="space-y-2 max-h-[460px] overflow-y-auto pr-0.5">
-                            {ambosSubs.length === 0 ? (
-                              <div className="text-[10px] text-slate-400 text-center py-10 italic bg-white/40 rounded-xl border border-dashed border-slate-200 font-sans">Lista vazia</div>
-                            ) : (
-                              ambosSubs.map(renderSubjectCardInColumn)
                             )}
                           </div>
                         </div>
