@@ -94,6 +94,7 @@ interface Subject {
   allowedTurmaIds?: string[];
   workloadFundamental?: number;
   workloadMedio?: number;
+  isTechnical?: boolean;
 }
 
 interface Turma {
@@ -104,6 +105,7 @@ interface Turma {
   color?: string;
   icon?: string;
   dailyClassCount?: 5 | 6;
+  isTechnical?: boolean;
 }
 
 interface ScheduleSlot {
@@ -427,6 +429,9 @@ export default function ScheduleGenerator() {
   const [schoolName, setSchoolName] = useState<string>('CE LUCAS LENIAR EF.M.P.');
   const [showSchoolInput, setShowSchoolInput] = useState(false);
   const [tempSchoolName, setTempSchoolName] = useState('');
+  const [isCivicoMilitar, setIsCivicoMilitar] = useState<boolean>(() => {
+    return localStorage.getItem('cecm_is_civico_militar') === 'true';
+  });
 
   const [academicSystem, setAcademicSystem] = useState<'Bimestral' | 'Trimestral'>(() => {
     return (localStorage.getItem('cecm_academic_system') as any) || 'Bimestral';
@@ -546,6 +551,7 @@ export default function ScheduleGenerator() {
   const [newSubjectWorkload, setNewSubjectWorkload] = useState<number>(5);
   const [newSubjectWorkloadFundamental, setNewSubjectWorkloadFundamental] = useState<number | ''>('');
   const [newSubjectWorkloadMedio, setNewSubjectWorkloadMedio] = useState<number | ''>('');
+  const [newSubjectIsTechnical, setNewSubjectIsTechnical] = useState(false);
   const [newSubjectUseLabComp, setNewSubjectUseLabComp] = useState(false);
   const [newSubjectUseLabTab, setNewSubjectUseLabTab] = useState(false);
   const [newSubjectUseSalaMat, setNewSubjectUseSalaMat] = useState(false);
@@ -824,6 +830,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
   const [newTurmaName, setNewTurmaName] = useState('');
   const [newTurmaShift, setNewTurmaShift] = useState<'manha' | 'tarde' | 'noite' | 'todas'>('todas');
   const [newTurmaDailyClassCount, setNewTurmaDailyClassCount] = useState<5 | 6>(6);
+  const [newTurmaIsTechnical, setNewTurmaIsTechnical] = useState<boolean>(false);
   const [editingTurmaId, setEditingTurmaId] = useState<string | null>(null);
 
   // Filter turmas for the interactive grid - let's show all by default unless we really need filtering
@@ -1376,7 +1383,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     localStorage.setItem('cecm_academic_start', academicStartDate);
     localStorage.setItem('cecm_academic_end', academicEndDate);
     localStorage.setItem('cecm_academic_dates', JSON.stringify(academicDates));
-  }, [teachers, subjects, turmas, schedules, version, logoUrl, schoolName, academicSystem, academicPeriod, academicStartDate, academicEndDate, academicDates, dataLoaded]);
+    localStorage.setItem('cecm_is_civico_militar', isCivicoMilitar ? 'true' : 'false');
+  }, [teachers, subjects, turmas, schedules, version, logoUrl, schoolName, academicSystem, academicPeriod, academicStartDate, academicEndDate, academicDates, isCivicoMilitar, dataLoaded]);
 
   // Backup functions
   useEffect(() => {
@@ -2025,17 +2033,38 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         }
       }
     } else {
-      // Fallback rule for standard unconfigured legacy courses: Marketing is strictly for specialized classes: 1ºB, 2ºB, 3ºB
-      if (subjectNameLower.includes('marketing') || subjectNameLower.includes('análise de mercado') || subjectNameLower.includes('analise de mercado')) {
+      // Fallback rule for technical courses: Technical subjects are strictly for specialized classes if not explicitly overridden
+      const isTechnicalSubject = S.isTechnical ||
+                                 subjectNameLower.includes('marketing') || 
+                                 subjectNameLower.includes('análise de mercado') || 
+                                 subjectNameLower.includes('analise de mercado') ||
+                                 subjectNameLower.includes('mkt') ||
+                                 subjectNameLower.includes('vendas') ||
+                                 S.id === 'sub-anmerc' ||
+                                 S.id === 'sub-mktcont' ||
+                                 S.id === 'sub-tecdigmak' ||
+                                 S.id === 'sub-tecdigmark' ||
+                                 S.id === 'sub-segmark' ||
+                                 S.id === 'sub-tecvend';
+
+      if (isTechnicalSubject) {
+        let isAllowed = false;
+        if (T.isTechnical !== undefined) {
+          isAllowed = T.isTechnical;
+        } else {
+          // Backward-compatible check if isTechnical is not set yet
+          const isAllowedMarketingTurma = /1.*B/i.test(turmaNameUpper) || 
+                                         /2.*B/i.test(turmaNameUpper) || 
+                                         /3.*B/i.test(turmaNameUpper) || 
+                                         turmaNameUpper.includes('1B') || 
+                                         turmaNameUpper.includes('2B') || 
+                                         turmaNameUpper.includes('3B');
+          isAllowed = isAllowedMarketingTurma;
+        }
+
         const hasExplicitConfig = S.customWorkloads?.[TId] !== undefined && S.customWorkloads[TId] > 0;
-        const isAllowedMarketingTurma = /1.*B/i.test(turmaNameUpper) || 
-                                       /2.*B/i.test(turmaNameUpper) || 
-                                       /3.*B/i.test(turmaNameUpper) || 
-                                       turmaNameUpper.includes('1B') || 
-                                       turmaNameUpper.includes('2B') || 
-                                       turmaNameUpper.includes('3B');
         
-        if (!hasExplicitConfig && !isAllowedMarketingTurma) {
+        if (!isAllowed && !hasExplicitConfig) {
           return { workload: 0, classWorkload: 0, labWorkload: 0 };
         }
       }
@@ -2189,7 +2218,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     // Tenta invocar a API de Backend
     await runSolverBackend({ mode: overrideMode, shift: overrideShift, turmas: overrideTurmaId });
 
-    const effectiveMode = overrideMode || autoGenMode;
+    try {
+      const effectiveMode = overrideMode || autoGenMode;
     const effectiveShift = overrideShift || autoGenShift;
     setIsSaved(false);
     const errors: string[] = [];
@@ -2603,12 +2633,12 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     };
 
     let steps = 0;
-    const maxSteps = 300000;
+    const maxSteps = 20000;
 
     const solve = async (groupIndex: number): Promise<boolean> => {
       steps++;
       if (steps > maxSteps) return false;
-      if (steps % 10000 === 0) {
+      if (steps % 5000 === 0) {
         await new Promise(r => setTimeout(r, 0));
       }
       if (groupIndex >= sortedGroups.length) return true;
@@ -2845,21 +2875,26 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
        });
     }
 
-    setSchedules(newSchedules);
+      setSchedules(newSchedules);
 
-    setAutoGenResults({
-      solved,
-      scannedCount: requirements.length,
-      placedCount: requirements.length - failedLessonsCount,
-      pending: pendingLessons,
-      errors
-    });
-    
-    setIsAutoGenerateModalOpen(false);
-    setIsAutoGenerateResultsModalOpen(true);
-    setIsAutoGenerateResultsMinimized(false);
-    setIsGenerating(false);
-    setIsLoading(false);
+      setAutoGenResults({
+        solved,
+        scannedCount: requirements.length,
+        placedCount: requirements.length - failedLessonsCount,
+        pending: pendingLessons,
+        errors
+      });
+      
+      setIsAutoGenerateModalOpen(false);
+      setIsAutoGenerateResultsModalOpen(true);
+      setIsAutoGenerateResultsMinimized(false);
+    } catch (err: any) {
+      console.error("Erro na geração automática de horários:", err);
+      alert("Houve um problema durante o cálculo automático da grade de aulas: " + err.message);
+    } finally {
+      setIsGenerating(false);
+      setIsLoading(false);
+    }
   };
 
 
@@ -3125,6 +3160,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       workload: newSubjectWorkload || 1,
       workloadFundamental: newSubjectWorkloadFundamental === '' ? undefined : newSubjectWorkloadFundamental,
       workloadMedio: newSubjectWorkloadMedio === '' ? undefined : newSubjectWorkloadMedio,
+      isTechnical: newSubjectIsTechnical,
       useLabComp: newSubjectUseLabComp,
       useLabTab: newSubjectUseLabTab,
       useSalaMat: newSubjectUseSalaMat,
@@ -3157,6 +3193,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     setNewSubjectWorkload(2);
     setNewSubjectWorkloadFundamental('');
     setNewSubjectWorkloadMedio('');
+    setNewSubjectIsTechnical(false);
     setNewSubjectUseLabComp(false);
     setNewSubjectUseLabTab(false);
     setNewSubjectUseSalaMat(false);
@@ -3175,6 +3212,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     setNewSubjectWorkload(subject.workload);
     setNewSubjectWorkloadFundamental(subject.workloadFundamental ?? '');
     setNewSubjectWorkloadMedio(subject.workloadMedio ?? '');
+    setNewSubjectIsTechnical(subject.isTechnical || false);
     setNewSubjectUseLabComp(subject.useLabComp || false);
     setNewSubjectUseLabTab(subject.useLabTab || false);
     setNewSubjectUseSalaMat(subject.useSalaMat || false);
@@ -3269,7 +3307,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       const shiftChanged = oldTurma && oldTurma.shift !== concreteShift;
       
       setTurmas(prev => prev.map(t => t.id === editingTurmaId 
-        ? { ...t, name: formattedName, shift: concreteShift, dailyClassCount: newTurmaDailyClassCount } 
+        ? { ...t, name: formattedName, shift: concreteShift, dailyClassCount: newTurmaDailyClassCount, isTechnical: newTurmaIsTechnical } 
         : t
       ));
 
@@ -3277,7 +3315,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         setSchedules(prev => {
           const next = { ...prev };
           if (next[editingTurmaId]) {
-            next[editingTurmaId] = remapScheduleIfNecessary({ id: editingTurmaId, name: formattedName, shift: concreteShift, dailyClassCount: newTurmaDailyClassCount }, next[editingTurmaId]);
+            next[editingTurmaId] = remapScheduleIfNecessary({ id: editingTurmaId, name: formattedName, shift: concreteShift, dailyClassCount: newTurmaDailyClassCount, isTechnical: newTurmaIsTechnical }, next[editingTurmaId]);
           }
           return next;
         });
@@ -3308,13 +3346,14 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         id: generateId(), 
         name: formattedName,
         shift: concreteShift,
-        dailyClassCount: newTurmaDailyClassCount
+        dailyClassCount: newTurmaDailyClassCount,
+        isTechnical: newTurmaIsTechnical
       };
       setTurmas([...turmas, newTurma]);
       if (!selectedTurmaId) setSelectedTurmaId(newTurma.id);
 
       // Desafio 1: Automatizar a inserção da Matriz Curricular (SEED-PR 2026) dependendo do perfil da escola e nível da turma
-      const isCCM = localStorage.getItem('cecm_is_civico_militar') === 'true';
+      const isCCM = isCivicoMilitar;
       const isEF = /6[º°oaA]|7[º°oaA]|8[º°oaA]|9[º°oaA]/.test(formattedName);
       
       const targetWorkloads: Record<string, number> = {};
@@ -3369,6 +3408,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     
     setNewTurmaName('');
     setNewTurmaDailyClassCount(6);
+    setNewTurmaIsTechnical(false);
   };
 
   const startEditTurma = (turma: Turma) => {
@@ -3376,6 +3416,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     setNewTurmaName(turma.name);
     setNewTurmaShift(turma.shift || importShift); // Use active shift as default
     setNewTurmaDailyClassCount(turma.dailyClassCount || 6);
+    setNewTurmaIsTechnical(!!turma.isTechnical);
   };
 
   const [showAllSubjectsInRoom, setShowAllSubjectsInRoom] = useState(false);
@@ -7987,19 +8028,18 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     <button
                       type="button"
                       onClick={() => {
-                        localStorage.setItem('cecm_is_civico_militar', 'false');
-                        setAcademicSystem(prev => prev);
+                        setIsCivicoMilitar(false);
                       }}
                       className={`flex items-start gap-2.5 p-2 rounded-xl border text-left cursor-pointer transition-all ${
-                        localStorage.getItem('cecm_is_civico_militar') !== 'true'
+                        !isCivicoMilitar
                           ? 'bg-emerald-50/50 border-emerald-500 ring-1 ring-emerald-500/10'
                           : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50'
                       }`}
                     >
                       <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                        localStorage.getItem('cecm_is_civico_militar') !== 'true' ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 bg-white'
+                        !isCivicoMilitar ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 bg-white'
                       }`}>
-                        {localStorage.getItem('cecm_is_civico_militar') !== 'true' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        {!isCivicoMilitar && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                       </div>
                       <div>
                         <span className="text-[11px] font-bold text-slate-800 block leading-tight">Colégio Estadual Regular</span>
@@ -8011,19 +8051,18 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     <button
                       type="button"
                       onClick={() => {
-                        localStorage.setItem('cecm_is_civico_militar', 'true');
-                        setAcademicSystem(prev => prev);
+                        setIsCivicoMilitar(true);
                       }}
                       className={`flex items-start gap-2.5 p-2 rounded-xl border text-left cursor-pointer transition-all ${
-                        localStorage.getItem('cecm_is_civico_militar') === 'true'
+                        isCivicoMilitar
                           ? 'bg-blue-50/50 border-blue-500 ring-1 ring-blue-500/10'
                           : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50'
                       }`}
                     >
                       <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                        localStorage.getItem('cecm_is_civico_militar') === 'true' ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white'
+                        isCivicoMilitar ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white'
                       }`}>
-                        {localStorage.getItem('cecm_is_civico_militar') === 'true' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        {isCivicoMilitar && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                       </div>
                       <div>
                         <span className="text-[11px] font-bold text-slate-800 block leading-tight">Cívico-Militar (CCM)</span>
@@ -8411,6 +8450,18 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         Turma com apenas 5 aulas por dia (25h/semana)
                       </span>
                     </label>
+
+                    <label className="flex items-center gap-2.5 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer select-none hover:bg-slate-100 transition-all w-full">
+                      <input
+                        type="checkbox"
+                        checked={newTurmaIsTechnical}
+                        onChange={e => setNewTurmaIsTechnical(e.target.checked)}
+                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <span className="text-[11px] font-black text-slate-500 uppercase">
+                        Ensino Técnico / Profissionalizante (Com Marketing)
+                      </span>
+                    </label>
                   </div>
                 </div>
 
@@ -8427,7 +8478,14 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                             {shiftTurmas.map(turma => (
                               <div key={turma.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-xl hover:bg-white border border-transparent hover:border-slate-200 transition-all group">
                                 <div className="flex flex-col">
-                                  <span className="text-xs font-black text-slate-800">{turma.name}</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-black text-slate-800">{turma.name}</span>
+                                    {turma.isTechnical && (
+                                      <span className="text-[8px] bg-indigo-50 text-indigo-700 font-black px-1.5 py-0.5 rounded uppercase tracking-wider border border-indigo-100">
+                                        Técnico
+                                      </span>
+                                    )}
+                                  </div>
                                   <span className="text-[9px] font-bold text-slate-400 uppercase">
                                     {turma.dailyClassCount || 6} AULAS/DIA
                                   </span>
@@ -8454,7 +8512,14 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       ).map(turma => (
                         <div key={turma.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-white border border-transparent hover:border-slate-100 transition-all group">
                           <div className="flex flex-col">
-                            <span className="text-xs font-black text-slate-800">{turma.name}</span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs font-black text-slate-800">{turma.name}</span>
+                              {turma.isTechnical && (
+                                <span className="text-[8px] bg-indigo-50 text-indigo-700 font-black px-1.5 py-0.5 rounded uppercase tracking-wider border border-indigo-100">
+                                  Técnico
+                                </span>
+                              )}
+                            </div>
                             <span className="text-[9px] font-bold text-slate-400 uppercase">
                               {turma.dailyClassCount || 6} AULAS/DIA
                             </span>
@@ -9404,6 +9469,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     setEditingSubjectId(null);
                     setNewSubjectName('');
                     setNewSubjectWorkload(2);
+                    setNewSubjectIsTechnical(false);
                     setNewSubjectUseLabComp(false);
                     setNewSubjectUseLabTab(false);
                     setNewSubjectUseSalaMat(false);
@@ -9448,6 +9514,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                             <span className="text-[8px] font-bold text-slate-400">Padrão: {s.workload}</span>
                             {s.workloadFundamental && <span className="text-[8px] font-bold text-emerald-600">Fund: {s.workloadFundamental}</span>}
                             {s.workloadMedio && <span className="text-[8px] font-bold text-blue-600">Médio: {s.workloadMedio}</span>}
+                            {s.isTechnical && <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 px-1 rounded border border-indigo-100 uppercase">Técnico</span>}
                           </div>
                         </div>
                       ))}
@@ -9521,6 +9588,27 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         />
                       </div>
                     </div>
+                  </div>
+
+                  {/* Componente Curricular: Técnico? */}
+                  <div className="mt-2 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                    <label className="flex items-start gap-3 cursor-pointer group">
+                      <div className="relative flex items-center justify-center shrink-0 mt-0.5">
+                        <input 
+                          type="checkbox" 
+                          checked={newSubjectIsTechnical}
+                          onChange={(e) => setNewSubjectIsTechnical(e.target.checked)}
+                          className="peer appearance-none w-4 h-4 border-2 border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer"
+                        />
+                        <Check className="w-2.5 h-2.5 text-white absolute opacity-0 scale-50 peer-checked:opacity-100 peer-checked:scale-100 transition-all pointer-events-none" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-indigo-900 block mb-0.5">Disciplina Técnica / Profissionalizante</span>
+                        <span className="text-[9px] text-indigo-700/80 leading-tight block font-semibold">
+                          Marque para garantir que essa matéria só seja lecionada em turmas marcadas como "Técnico". Ex: Marketing, Finanças e etc.
+                        </span>
+                      </div>
+                    </label>
                   </div>
 
                   {/* Salas de Aula / Laboratórios */}
@@ -9740,6 +9828,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     setEditingSubjectId(null);
                     setNewSubjectName('');
                     setNewSubjectWorkload(2);
+                    setNewSubjectIsTechnical(false);
                     setNewSubjectUseLabComp(false);
                     setNewSubjectUseLabTab(false);
                     setNewSubjectUseSalaMat(false);
@@ -11507,19 +11596,18 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                           <button
                             type="button"
                             onClick={() => {
-                              localStorage.setItem('cecm_is_civico_militar', 'false');
-                              setAcademicSystem(prev => prev); // force re-render
+                              setIsCivicoMilitar(false);
                             }}
                             className={`flex items-start gap-3 p-3 rounded-xl border text-left cursor-pointer transition-all bg-white hover:bg-slate-50/50 ${
-                              localStorage.getItem('cecm_is_civico_militar') !== 'true'
+                              !isCivicoMilitar
                                 ? 'border-emerald-500 ring-2 ring-emerald-500/10 bg-emerald-50/10'
                                 : 'border-slate-200'
                             }`}
                           >
                             <div className={`mt-0.5 w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                              localStorage.getItem('cecm_is_civico_militar') !== 'true' ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 bg-white'
+                              !isCivicoMilitar ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 bg-white'
                             }`}>
-                              {localStorage.getItem('cecm_is_civico_militar') !== 'true' && <div className="w-2 h-2 rounded-full bg-white" />}
+                              {!isCivicoMilitar && <div className="w-2 h-2 rounded-full bg-white" />}
                             </div>
                             <div>
                               <span className="text-xs font-bold text-slate-800 block leading-tight mb-0.5">Colégio Estadual Regular</span>
@@ -11533,19 +11621,18 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                           <button
                             type="button"
                             onClick={() => {
-                              localStorage.setItem('cecm_is_civico_militar', 'true');
-                              setAcademicSystem(prev => prev); // force re-render
+                              setIsCivicoMilitar(true);
                             }}
                             className={`flex items-start gap-3 p-3 rounded-xl border text-left cursor-pointer transition-all bg-white hover:bg-slate-50/50 ${
-                              localStorage.getItem('cecm_is_civico_militar') === 'true'
+                              isCivicoMilitar
                                 ? 'border-blue-500 ring-2 ring-blue-500/10 bg-blue-50/10'
                                 : 'border-slate-200'
                             }`}
                           >
                             <div className={`mt-0.5 w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                              localStorage.getItem('cecm_is_civico_militar') === 'true' ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white'
+                              isCivicoMilitar ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white'
                             }`}>
-                              {localStorage.getItem('cecm_is_civico_militar') === 'true' && <div className="w-2 h-2 rounded-full bg-white" />}
+                              {isCivicoMilitar && <div className="w-2 h-2 rounded-full bg-white" />}
                             </div>
                             <div>
                               <span className="text-xs font-bold text-slate-800 block leading-tight mb-0.5">Colégio Cívico-Militar (CCM)</span>
