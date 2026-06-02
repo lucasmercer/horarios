@@ -8388,7 +8388,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       {/* Turmas Management Modal */}
       <AnimatePresence>
         {(isAddingTurma || isAlunosRoute) && (
-          <div className="fixed inset-y-0 right-0 z-[85] flex w-[480px] bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.15)] pointer-events-auto border-l border-slate-200">
+          <div className={`fixed inset-y-0 right-0 z-[85] flex ${isAlunosRoute ? 'w-[85vw] max-w-[1200px]' : 'w-[480px]'} bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.15)] pointer-events-auto border-l border-slate-200`}>
             <motion.div 
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
@@ -8511,8 +8511,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       {sortTurmasList(
                         turmas.filter(t => !t.isRoom && t.shift === newTurmaShift)
                       ).map(turma => (
-                        <div key={turma.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-white border border-transparent hover:border-slate-100 transition-all group">
-                          <div className="flex flex-col">
+                        <div key={turma.id} className="relative flex flex-col p-3 bg-slate-50 rounded-xl hover:bg-white border border-transparent hover:border-slate-200 transition-all group">
+                          <div className="flex flex-col pr-14 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-xs font-black text-slate-800">{turma.name}</span>
                               {turma.isTechnical && (
@@ -8521,16 +8521,25 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                 </span>
                               )}
                             </div>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase mt-1">
                               {turma.dailyClassCount || 6} AULAS/DIA
                             </span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <button onClick={() => startEditTurma(turma)} className="p-2 text-slate-300 hover:text-blue-500 transition-colors">
-                              <Pencil className="w-4 h-4" />
+                          
+                          <div className="absolute top-1/2 -translate-y-1/2 right-2 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => startEditTurma(turma)} 
+                              className="p-1.5 bg-white text-slate-400 hover:text-blue-600 rounded-md shadow-sm border border-slate-200 transition-colors"
+                              title="Editar Turma"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
                             </button>
-                            <button onClick={() => removeTurma(turma.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                              <Trash2 className="w-4 h-4" />
+                            <button 
+                              onClick={() => removeTurma(turma.id)} 
+                              className="p-1.5 bg-white text-slate-400 hover:text-rose-600 rounded-md shadow-sm border border-slate-200 transition-colors"
+                              title="Excluir Turma"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
@@ -8760,7 +8769,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       {/* Teachers Management Modal */}
       <AnimatePresence>
         {(isAddingTeacher || isProfessoresRoute) && (
-          <div className={`fixed inset-y-0 right-0 z-[85] flex ${isProfessoresRoute ? 'w-[800px]' : 'w-[500px]'} bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.15)] pointer-events-auto border-l border-slate-200`}>
+          <div className={`fixed inset-y-0 right-0 z-[85] flex ${isProfessoresRoute ? 'w-[90vw]' : 'w-[500px]'} bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.15)] pointer-events-auto border-l border-slate-200`}>
             <motion.div 
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
@@ -9371,9 +9380,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         .map(teacher => {
                         const teacherSubjects = subjects.filter(s => teacher.subjectIds?.includes(s.id));
                         return (
-                          <div key={teacher.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-white border border-transparent hover:border-slate-100 transition-all group">
-                            <div className="flex flex-col flex-1 min-w-0 pr-2">
-                              <div className="flex flex-wrap items-center gap-2">
+                          <div key={teacher.id} className="relative flex flex-col p-3 bg-slate-50 rounded-xl hover:bg-white border border-transparent hover:border-slate-200 transition-all group">
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2 pr-14">
                                 <span className="text-xs font-black text-slate-800 break-words">{teacher.name}</span>
                                 {teacher.schoolWorkload !== undefined && (
                                   <span className="text-[7px] font-black bg-purple-100 text-purple-700 px-1 py-0.5 rounded uppercase tracking-tighter shadow-sm" title={`Carga máxima fixada em ${teacher.schoolWorkload} aulas gerais neste colégio`}>
@@ -9398,32 +9407,39 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                   <span className="text-[7px] font-black bg-rose-100 text-rose-700 px-1 py-0.5 rounded uppercase tracking-tighter" title="Exige intervalo entre turnos consecutivas">Intervalo Turno</span>
                                 )}
                               </div>
-                              <div className="flex flex-wrap gap-1 mt-1">
+                              <div className="flex flex-wrap gap-1 mt-1.5">
                                 {teacherSubjects.map(s => (
                                   <span key={s.id} className="text-[8px] font-black bg-[#657c36]/10 text-[#657c36] px-1.5 py-0.5 rounded uppercase">{s.name}</span>
                                 ))}
                                 {teacherSubjects.length === 0 && <span className="text-[8px] font-bold text-slate-400">Sem disciplina vinculada</span>}
                               </div>
                               {teacher.turmaIds && teacher.turmaIds.length > 0 ? (
-                                <div className="flex flex-wrap gap-1 items-center mt-1">
+                                <div className="flex flex-wrap gap-1 items-center mt-1.5">
                                   <span className="text-[7.5px] font-bold text-slate-400 uppercase tracking-tight">Turmas:</span>
                                   {turmas.filter(t => teacher.turmaIds?.includes(t.id)).map(t => (
                                     <span key={t.id} className="text-[7.5px] font-bold bg-indigo-50 border border-indigo-100 text-indigo-600 px-1 rounded uppercase tracking-tighter leading-none">{t.name}</span>
                                   ))}
                                 </div>
                               ) : (
-                                <div className="text-[7.5px] font-semibold text-slate-400 mt-1 uppercase tracking-tight">Todas as Turmas</div>
+                                <div className="text-[7.5px] font-semibold text-slate-400 mt-1.5 uppercase tracking-tight">Todas as Turmas</div>
                               )}
                             </div>
-                            <div className="flex items-center gap-1">
+                            
+                            {/* Absolute Positioned Actions Layer (Visible on hover on Desktop, always visible on mobile if needed, but doing hover mostly) */}
+                            <div className="absolute top-2 right-2 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                               <button 
                                 onClick={() => startEditTeacher(teacher)} 
-                                className="p-2 text-slate-300 hover:text-blue-500 transition-colors"
+                                className="p-1.5 bg-white text-slate-400 hover:text-blue-600 rounded-md shadow-sm border border-slate-200 transition-colors"
+                                title="Editar Professor"
                               >
-                                <Pencil className="w-4 h-4" />
+                                <Pencil className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => removeTeacher(teacher.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                                <Trash2 className="w-4 h-4" />
+                              <button 
+                                onClick={() => removeTeacher(teacher.id)} 
+                                className="p-1.5 bg-white text-slate-400 hover:text-rose-600 rounded-md shadow-sm border border-slate-200 transition-colors"
+                                title="Excluir Professor"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </div>
@@ -9443,7 +9459,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       {/* Subjects Management Modal */}
       <AnimatePresence>
         {(isAddingSubject || isDisciplinasRoute) && (
-          <div className={`fixed inset-y-0 right-0 z-[85] flex ${isDisciplinasRoute ? 'w-[800px]' : 'w-[500px]'} bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.15)] pointer-events-auto border-l border-slate-200`}>
+          <div className={`fixed inset-y-0 right-0 z-[85] flex ${isDisciplinasRoute ? 'w-[90vw]' : 'w-[500px]'} bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.15)] pointer-events-auto border-l border-slate-200`}>
             <motion.div 
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
@@ -9502,23 +9518,32 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   ) : (
                     <div className={isDisciplinasRoute ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 content-start" : "grid grid-cols-2 gap-2"}>
                       {subjects.sort((a,b) => a.name.localeCompare(b.name)).map(s => (
-                        <div key={s.id} className="flex flex-col min-w-0 break-words gap-0.5 p-1.5 px-2 bg-slate-50 border border-slate-200 rounded-lg group hover:border-[#657c36] hover:bg-white transition-all">
-                          <div className="flex items-center justify-between gap-2 min-w-0">
-                            <span className="text-[10px] font-black text-slate-700 uppercase cursor-default truncate">{s.name}</span>
-                            <div className="flex shrink-0">
-                              <button onClick={() => startEditSubject(s)} className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-[#657c36] cursor-pointer">
-                                <Pencil className="w-3 h-3" />
-                              </button>
-                              <button onClick={() => removeSubject(s.id)} className="p-1 hover:bg-red-100 rounded text-slate-500 hover:text-red-500 cursor-pointer">
-                                <Trash2 className="w-3 h-3" />
-                              </button>
+                        <div key={s.id} className="relative flex flex-col min-w-0 break-words gap-0.5 p-1.5 px-2 bg-slate-50 border border-slate-200 rounded-lg group hover:border-[#657c36] hover:bg-white transition-all">
+                          <div className="flex flex-col min-w-0 pr-10">
+                            <span className="text-[10px] font-black text-slate-700 uppercase cursor-default truncate" title={s.name}>{s.name}</span>
+                            <div className="flex gap-2.5 mt-0.5">
+                              <span className="text-[8px] font-bold text-slate-400">Padrão: {s.workload}</span>
+                              {s.workloadFundamental && <span className="text-[8px] font-bold text-emerald-600">Fund: {s.workloadFundamental}</span>}
+                              {s.workloadMedio && <span className="text-[8px] font-bold text-blue-600">Médio: {s.workloadMedio}</span>}
+                              {s.isTechnical && <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 px-1 rounded border border-indigo-100 uppercase">{techCourseName}</span>}
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            <span className="text-[8px] font-bold text-slate-400">Padrão: {s.workload}</span>
-                            {s.workloadFundamental && <span className="text-[8px] font-bold text-emerald-600">Fund: {s.workloadFundamental}</span>}
-                            {s.workloadMedio && <span className="text-[8px] font-bold text-blue-600">Médio: {s.workloadMedio}</span>}
-                            {s.isTechnical && <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 px-1 rounded border border-indigo-100 uppercase">{techCourseName}</span>}
+                          
+                          <div className="absolute top-1/2 -translate-y-1/2 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => startEditSubject(s)} 
+                              className="p-1.5 bg-white text-slate-400 hover:text-[#657c36] rounded-md shadow-sm border border-slate-200 transition-colors"
+                              title="Editar Disciplina"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                            <button 
+                              onClick={() => removeSubject(s.id)} 
+                              className="p-1.5 bg-white text-slate-400 hover:text-red-500 rounded-md shadow-sm border border-slate-200 transition-colors"
+                              title="Excluir Disciplina"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -11865,39 +11890,43 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     const tShift = turma.shift || 'todas';
                     const badgeColor = tShift === 'manha' ? 'bg-sky-100 text-sky-850' : tShift === 'tarde' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800';
                     return (
-                      <div key={turma.id} className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between hover:border-slate-350 transition-colors">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: turma.color || '#94a3b8' }} />
-                            <span className="text-xs font-black text-slate-800 uppercase">{turma.name}</span>
+                      <div key={turma.id} className="relative bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between group hover:border-[#657c36] transition-colors">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-1 pr-14">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: turma.color || '#94a3b8' }} />
+                              <span className="text-xs font-black text-slate-800 uppercase">{turma.name}</span>
+                            </div>
+                            <div className="flex gap-1.5 items-center">
+                              <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeColor}`}>{tShift}</span>
+                              <span className="text-[8px] font-bold text-slate-400 uppercase font-sans">
+                                {turma.dailyClassCount || 6} aulas/dia {turma.shift === 'noite' && enableNoiteAsynchronous && '+ 1 Assíncrona'}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex gap-1.5 items-center">
-                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeColor}`}>{tShift}</span>
-                            <span className="text-[8px] font-bold text-slate-400 uppercase font-sans">
-                              {turma.dailyClassCount || 6} aulas/dia {turma.shift === 'noite' && enableNoiteAsynchronous && '+ 1 Assíncrona'}
-                            </span>
+                          
+                          <div className="absolute top-1/2 -translate-y-1/2 right-3 flex gap-1 items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => {
+                                setEditingTurmaId(turma.id);
+                                setNewTurmaName(turma.name);
+                                setNewTurmaShift(tShift === 'todas' ? 'todas' : tShift);
+                                setNewTurmaDailyClassCount(turma.dailyClassCount || 6);
+                                openSidebarModal('turma');
+                              }}
+                              className="p-1.5 bg-white shadow-sm border border-slate-200 hover:border-slate-300 rounded-lg text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
+                              title="Editar Turma"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                              onClick={() => removeTurma(turma.id)}
+                              className="p-1.5 bg-white shadow-sm border border-slate-200 hover:border-slate-300 rounded-lg text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                              title="Excluir Turma"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-                        </div>
-                        
-                        <div className="flex gap-1">
-                          <button 
-                            onClick={() => {
-                              setEditingTurmaId(turma.id);
-                              setNewTurmaName(turma.name);
-                              setNewTurmaShift(tShift === 'todas' ? 'todas' : tShift);
-                              setNewTurmaDailyClassCount(turma.dailyClassCount || 6);
-                              openSidebarModal('turma');
-                            }}
-                            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button 
-                            onClick={() => removeTurma(turma.id)}
-                            className="p-1.5 hover:bg-rose-50 rounded-lg text-slate-450 hover:text-rose-600 transition-colors cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
                         </div>
                       </div>
                     );
@@ -12319,11 +12348,11 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         }
                         
                         return (
-                          <div key={teacher.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                          <div key={teacher.id} className="relative bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between group hover:border-[#657c36] transition-colors">
                             <div className="flex justify-between items-start">
-                              <div className="space-y-1">
+                              <div className="space-y-1 pr-14">
                                 <span className="text-xs font-black text-slate-800 uppercase block">{teacher.name}</span>
-                                <span className="text-[9px] text-slate-400 font-bold uppercase block">Matérias: {subjectsTaught}</span>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase block line-clamp-2" title={subjectsTaught}>Matérias: {subjectsTaught}</span>
                                 <div className="flex flex-wrap gap-1.5 items-center mt-1">
                                   <span className="text-[8px] bg-indigo-50 text-indigo-700 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                                     {isAvailabilityLimited ? `${countLivres} slots livres` : 'Totalmente Disponível 🌐'}
@@ -12333,19 +12362,21 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                   )}
                                 </div>
                               </div>
-                              <div className="flex gap-1 shrink-0">
+                              <div className="absolute top-4 right-4 flex gap-1 items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                 <button 
                                   onClick={() => {
                                     startEditTeacher(teacher);
                                     openSidebarModal('professor');
                                   }}
-                                  className="p-1 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                                  className="p-1.5 bg-white shadow-sm border border-slate-200 hover:border-slate-300 rounded-lg text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
+                                  title="Editar Professor"
                                 >
                                   <Pencil className="w-3.5 h-3.5" />
                                 </button>
                                 <button 
                                   onClick={() => removeTeacher(teacher.id)}
-                                  className="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                  className="p-1.5 bg-white shadow-sm border border-slate-200 hover:border-slate-300 rounded-lg text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                  title="Excluir Professor"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
