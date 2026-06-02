@@ -378,7 +378,7 @@ export default function ScheduleGenerator() {
   const isProfessoresRoute = location.pathname === '/professores';
   const isAlunosRoute = location.pathname === '/alunos';
   const isDisciplinasRoute = location.pathname === '/disciplinas';
-  const isHorariosRoute = location.pathname === '/' || location.pathname === '/horarios' || (!isProfessoresRoute && !isAlunosRoute && !isDisciplinasRoute);
+  const isHorariosRoute = true;
 
   const formatTeacherName = (name: string | undefined): string => {
     if (!name) return '';
@@ -519,6 +519,9 @@ export default function ScheduleGenerator() {
   const [enableNoiteAsynchronous, setEnableNoiteAsynchronous] = useState<boolean>(() => {
     return localStorage.getItem('enable_noite_asynchronous') === 'true';
   });
+  const [techCourseName, setTechCourseName] = useState<string>(() => {
+    return localStorage.getItem('cecm_tech_course_name') || 'Marketing';
+  });
   const [disableDoubleClassesGlobally, setDisableDoubleClassesGlobally] = useState<boolean>(() => {
     return localStorage.getItem('disable_double_classes_globally') === 'true';
   });
@@ -590,6 +593,7 @@ export default function ScheduleGenerator() {
   const [mudancasMode, setMudancasMode] = useState<'manha' | 'tarde' | 'noite' | 'especificas'>(importShift);
   const [mudancasSelectedTurmas, setMudancasSelectedTurmas] = useState<string[]>([]);
   const [autoGenMode, setAutoGenMode] = useState<'all' | 'empty'>('all');
+  const [autoGenForceConflicts, setAutoGenForceConflicts] = useState(false);
   const [autoGenShift, setAutoGenShift] = useState<'both' | 'manha' | 'tarde' | 'noite' | 'labs'>('both');
   const [isAutoGenerateResultsModalOpen, setIsAutoGenerateResultsModalOpen] = useState(false);
   const [autoGenResults, setAutoGenResults] = useState<{
@@ -755,6 +759,30 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
   const [newRoomIcon, setNewRoomIcon] = useState('DoorClosed');
   const [isPrintingTurmaSelection, setIsPrintingTurmaSelection] = useState(false);
   const [isClearingSelection, setIsClearingSelection] = useState(false);
+
+  const openSidebarModal = (modalName: 'turma' | 'disciplina' | 'professor' | 'sala' | 'none') => {
+    setIsAddingTurma(modalName === 'turma');
+    setIsAddingSubject(modalName === 'disciplina');
+    setIsAddingTeacher(modalName === 'professor');
+    setIsAddingRoom(modalName === 'sala');
+    setIsConfiguringTimeRanges(false);
+    setIsPrintingTurmaSelection(false);
+    setIsClearingSelection(false);
+    setSelectedSlot(null);
+  };
+
+  useEffect(() => {
+    setIsAddingTeacher(false);
+    setIsAddingRoom(false);
+    setIsAddingSubject(false);
+    setIsAddingTurma(false);
+    setIsConfiguringTimeRanges(false);
+    setIsPrintingTurmaSelection(false);
+    setIsClearingSelection(false);
+    setEditingTeacherId(null);
+    setEditingSubjectId(null);
+    setEditingTurmaId(null);
+  }, [location.pathname]);
   const [clearMode, setClearMode] = useState<'tudo' | 'manha' | 'tarde' | 'noite' | 'Labs - Manhã' | 'Labs - Tarde' | 'Labs - Noite' | 'especificas'>('tudo');
   const [clearSelectedTurmas, setClearSelectedTurmas] = useState<string[]>([]);
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -1369,8 +1397,11 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
   };
 
   // Auto-save to localStorage whenever data changes
+  const [isAutosaving, setIsAutosaving] = useState(false);
+
   useEffect(() => {
     if (!dataLoaded) return;
+    setIsAutosaving(true);
     localStorage.setItem('cecm_teachers', JSON.stringify(teachers));
     localStorage.setItem('cecm_subjects', JSON.stringify(subjects));
     localStorage.setItem('cecm_turmas', JSON.stringify(turmas));
@@ -1384,6 +1415,13 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     localStorage.setItem('cecm_academic_end', academicEndDate);
     localStorage.setItem('cecm_academic_dates', JSON.stringify(academicDates));
     localStorage.setItem('cecm_is_civico_militar', isCivicoMilitar ? 'true' : 'false');
+    
+    const timeoutDesc = setTimeout(() => {
+      setIsAutosaving(false);
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
+    }, 500);
+    return () => clearTimeout(timeoutDesc);
   }, [teachers, subjects, turmas, schedules, version, logoUrl, schoolName, academicSystem, academicPeriod, academicStartDate, academicEndDate, academicDates, isCivicoMilitar, dataLoaded]);
 
   // Backup functions
@@ -1737,164 +1775,6 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     event.target.value = '';
   };
 
-  const handleLoadHealedBackup = async () => {
-    try {
-      const res = await fetch('/backup_completo.json');
-      if (!res.ok) {
-        alert('Não foi possível carregar o arquivo de demonstração.');
-        return;
-      }
-      const data = await res.json();
-      if (!data) return;
-
-      const proceedWithHealedImport = () => {
-        setTeachers(data.teachers || []);
-        
-        let importedSubjects = (data.subjects || []).map((s: any) => {
-          if (!s.roomIds) {
-            const roomIds = [];
-            if (s.useLabComp) roomIds.push(ID_LAB_INFO_COMP);
-            if (s.useLabTab) roomIds.push(ID_LAB_INFO_TAB);
-            if (s.useSalaMat) roomIds.push(ID_SALA_MAT);
-            return { ...s, roomIds };
-          }
-          return s;
-        });
-        setSubjects(importedSubjects);
-        
-        let importedTurmas = (data.turmas || []).map((t: any) => {
-          if ([ID_LAB_INFO_COMP, ID_LAB_INFO_TAB, ID_SALA_MAT].includes(t.id)) {
-            return { 
-              ...t, 
-              isRoom: true, 
-              shift: 'ambos',
-              color: t.color || (t.id === ID_LAB_INFO_COMP ? '#9333ea' : t.id === ID_LAB_INFO_TAB ? '#2563eb' : '#f97316'),
-              icon: (t.icon && t.icon !== 'Calculator' ? t.icon : undefined) || (t.id === ID_LAB_INFO_COMP ? 'Monitor' : t.id === ID_LAB_INFO_TAB ? 'Tablet' : 'Percent')
-            };
-          }
-          if (!t.isRoom) {
-            t.name = formatTurmaName(t.name);
-            if (!t.shift) {
-              const isNamedTarde = t.name?.toLowerCase().includes('tarde') || t.id?.toLowerCase().includes('tarde');
-              t.shift = isNamedTarde ? 'tarde' : 'manha';
-            }
-          }
-          return t;
-        });
-
-        const specialRooms = [
-          { id: ID_LAB_INFO_COMP, name: 'LABORATÓRIO 1', shift: 'ambos', isRoom: true, color: '#9333ea', icon: 'Monitor' },
-          { id: ID_LAB_INFO_TAB, name: 'LABORATÓRIO 2', shift: 'ambos', isRoom: true, color: '#2563eb', icon: 'Tablet' },
-          { id: ID_SALA_MAT, name: 'SALA DE MATEMÁTICA', shift: 'ambos', isRoom: true, color: '#f97316', icon: 'Percent' }
-        ];
-        
-        specialRooms.forEach(room => {
-          const existing = importedTurmas.find((t: any) => t.id === room.id);
-          if (!existing) {
-            importedTurmas.push(room);
-          } else {
-            if (!existing.isRoom) existing.isRoom = true;
-            if (!existing.shift) existing.shift = 'ambos';
-            if (!existing.color) existing.color = room.color;
-          }
-        });
-        
-        setTurmas(importedTurmas);
-
-        const rawSchedules = data.schedules || {};
-        const normalizedSchedules: AllSchedules = {};
-        
-        Object.keys(rawSchedules).forEach(tid => {
-          const turma = importedTurmas.find((t: any) => t.id === tid);
-          if (turma) {
-            normalizedSchedules[tid] = remapScheduleIfNecessary(turma, rawSchedules[tid]);
-          } else {
-            normalizedSchedules[tid] = rawSchedules[tid];
-          }
-        });
-
-        setSchedules(normalizedSchedules);
-        
-        const { updatedSubjects } = healSubjectConstraints(importedSubjects, normalizedSchedules, importedTurmas);
-        setSubjects(updatedSubjects);
-        localStorage.setItem('cecm_subjects', JSON.stringify(updatedSubjects));
-        localStorage.setItem('cecm_substitutions', JSON.stringify(data.substitutions || []));
-
-        setLogoUrl(data.logoUrl || '');
-        setSchoolName(data.schoolName || 'CE LUCAS LENIAR EF.M.P.');
-        
-        if (data.timeRangesManha) setTimeRangesManha(data.timeRangesManha);
-        if (data.timeRangesTarde) setTimeRangesTarde(data.timeRangesTarde);
-        if (data.timeRangesNoite) setTimeRangesNoite(data.timeRangesNoite);
-
-        if (data.enableNoite !== undefined) {
-          setEnableNoite(data.enableNoite);
-          localStorage.setItem('enable_noite_period', data.enableNoite ? 'true' : 'false');
-        }
-        if (data.enableNoiteAsynchronous !== undefined) {
-          setEnableNoiteAsynchronous(data.enableNoiteAsynchronous);
-          localStorage.setItem('enable_noite_asynchronous', data.enableNoiteAsynchronous ? 'true' : 'false');
-        }
-
-        if (data.academicSystem) {
-          setAcademicSystem(data.academicSystem);
-          localStorage.setItem('cecm_academic_system', data.academicSystem);
-        }
-        if (data.academicDates) {
-          setAcademicDates(data.academicDates);
-          localStorage.setItem('cecm_academic_dates', JSON.stringify(data.academicDates));
-          
-          const sys = data.academicSystem || 'Bimestral';
-          const today = new Date();
-          const numPeriods = sys === 'Bimestral' ? 4 : 3;
-          for (let p = 1; p <= numPeriods; p++) {
-            const key = `${sys}-${p}`;
-            const dates = data.academicDates[key];
-            if (dates && dates.start && dates.end) {
-              const parts = dates.start.split('/');
-              if (parts.length === 2) {
-                const start = new Date(today.getFullYear(), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                const endParts = dates.end.split('/');
-                const end = new Date(today.getFullYear(), parseInt(endParts[1]) - 1, parseInt(endParts[0]));
-                if (end < start) end.setFullYear(end.getFullYear() + 1);
-                start.setHours(0,0,0,0);
-                end.setHours(23,59,59,999);
-                if (today >= start && today <= end) {
-                  setAcademicPeriod(p);
-                  setAcademicStartDate(dates.start);
-                  setAcademicEndDate(dates.end);
-                  localStorage.setItem('cecm_academic_period', p.toString());
-                  localStorage.setItem('cecm_academic_start', dates.start);
-                  localStorage.setItem('cecm_academic_end', dates.end);
-                  break;
-                }
-              }
-            }
-          }
-        }
-
-        setVersion(74);
-        
-        if (importedTurmas.length > 0) {
-          setSelectedTurmaId(importedTurmas[0].id);
-          setImportShift(importedTurmas[0].shift || 'manha');
-        }
-        
-        alert('Carga Completa Carregada com Sucesso! 100% das 558 aulas foram organizadas de forma conflict-free.');
-      };
-
-      setConfirmConfig({
-        title: 'Carregar Carga 100% Completa',
-        message: 'ATENÇÃO: Deseja carregar a carga horária 100% calibrada? Isso substituirá seus dados locais atuais.',
-        confirmText: 'Carregar Grade Completa',
-        cancelText: 'Cancelar',
-        onConfirm: proceedWithHealedImport
-      });
-    } catch (err) {
-      alert('Erro ao carregar o backup otimizado do colégio.');
-    }
-  };
-
   interface LessonGroup {
     id: string;
     turmaId: string;
@@ -2035,6 +1915,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     } else {
       // Fallback rule for technical courses: Technical subjects are strictly for specialized classes if not explicitly overridden
       const isTechnicalSubject = S.isTechnical ||
+                                 (techCourseName.trim() && subjectNameLower.includes(techCourseName.toLowerCase().trim())) ||
                                  subjectNameLower.includes('marketing') || 
                                  subjectNameLower.includes('análise de mercado') || 
                                  subjectNameLower.includes('analise de mercado') ||
@@ -2053,13 +1934,13 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
           isAllowed = T.isTechnical;
         } else {
           // Backward-compatible check if isTechnical is not set yet
-          const isAllowedMarketingTurma = /1.*B/i.test(turmaNameUpper) || 
+          const isAllowedTechnicalTurma = /1.*B/i.test(turmaNameUpper) || 
                                          /2.*B/i.test(turmaNameUpper) || 
                                          /3.*B/i.test(turmaNameUpper) || 
                                          turmaNameUpper.includes('1B') || 
                                          turmaNameUpper.includes('2B') || 
                                          turmaNameUpper.includes('3B');
-          isAllowed = isAllowedMarketingTurma;
+          isAllowed = isAllowedTechnicalTurma;
         }
 
         const hasExplicitConfig = S.customWorkloads?.[TId] !== undefined && S.customWorkloads[TId] > 0;
@@ -2125,24 +2006,12 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
     // Proportional down-scale for lab workload if workload changed
     let labWorkload = S.labWorkload ?? 0;
-    let classWorkload = S.classWorkload ?? 0;
     
-    if (workload !== S.workload) {
-      if (labWorkload > 0) {
-        if (labWorkload >= workload) {
-          labWorkload = workload;
-          classWorkload = 0;
-        } else {
-          classWorkload = workload - labWorkload;
-        }
-      } else {
-        classWorkload = workload;
-      }
-    } else {
-      if (classWorkload === 0 && labWorkload === 0 && workload > 0) {
-        classWorkload = workload;
-      }
+    if (labWorkload > workload) {
+      labWorkload = workload;
     }
+    
+    let classWorkload = Math.max(0, workload - labWorkload);
     
     return { workload, classWorkload, labWorkload };
   };
@@ -2210,19 +2079,57 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     // Para manter retrocompatibilidade com modais antigos de loading (opcional)
     setIsGenerating(true); 
 
-    // Simula a passagem do payload e aguarda o script robusto.
-    // Como estamos no ambiente local preview sem o Node/js anexado direto à rota no Vite (exemplo),
-    // simular um delay do heavy processing de 1.5s para demonstrar o `Skeleton Loading` que foi requisitado
-    await new Promise(r => setTimeout(r, 1500));
-    
+    const effectiveMode = overrideMode || autoGenMode;
+    const effectiveShift = overrideShift || autoGenShift;
+
+    // Precalculate workloads based on UI's constraint evaluations
+    const subjectsForSolver = subjects.map(s => {
+      const solverCustomWorkloads: Record<string, number> = {};
+      turmas.forEach(t => {
+        solverCustomWorkloads[t.id] = getSubjectWorkloadsForTurma(s, t.id).workload;
+      });
+      return {
+        ...s,
+        customWorkloads: solverCustomWorkloads
+      };
+    });
+
     // Tenta invocar a API de Backend
-    await runSolverBackend({ mode: overrideMode, shift: overrideShift, turmas: overrideTurmaId });
+    const backendData = await runSolverBackend({ 
+      mode: effectiveMode, 
+      shift: effectiveShift, 
+      overrideTurmaId,
+      turmasArray: turmas,
+      teachersArray: teachers,
+      subjectsArray: subjectsForSolver,
+      schedules,
+      enableNoiteAsynchronous,
+      enableNoite,
+      disableDoubleClassesGlobally,
+      autoGenForceConflicts
+    });
+
+    if (backendData && backendData.success) {
+      setSchedules(backendData.computedSchedules);
+      setAutoGenResults({
+        solved: backendData.solved,
+        scannedCount: backendData.scannedCount,
+        placedCount: backendData.placedCount,
+        pending: backendData.pending || [],
+        errors: backendData.errors || []
+      });
+      setIsAutoGenerateModalOpen(false);
+      setIsAutoGenerateResultsModalOpen(true);
+      setIsAutoGenerateResultsMinimized(false);
+      setIsGenerating(false);
+      setIsLoading(false);
+      setIsSaved(false);
+      return;
+    }
 
     try {
-      const effectiveMode = overrideMode || autoGenMode;
-    const effectiveShift = overrideShift || autoGenShift;
-    setIsSaved(false);
-    const errors: string[] = [];
+      setIsSaved(false);
+      const errors: string[] = [];
     const pendingLessons: { turmaName: string; subjectName: string; teacherName: string; reason: string; turmaId: string; subjectId: string; teacherId: string; isDouble: boolean }[] = [];
 
     const activeTurmas = turmas.filter(t => {
@@ -2875,15 +2782,61 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
        });
     }
 
-      setSchedules(newSchedules);
+    if (autoGenForceConflicts && pendingLessons.length > 0) {
+      for (const pending of pendingLessons) {
+        const { turmaId, subjectId, teacherId, isDouble } = pending;
+        const turma = turmas.find(t => t.id === turmaId);
+        if (!turma) continue;
 
-      setAutoGenResults({
-        solved,
-        scannedCount: requirements.length,
-        placedCount: requirements.length - failedLessonsCount,
-        pending: pendingLessons,
-        errors
-      });
+        let shiftPeriods: number[] = [];
+        if (turma.shift === 'noite') shiftPeriods = PERIODS_NOITE;
+        else if (turma.shift === 'tarde') shiftPeriods = PERIODS_TARDE;
+        else shiftPeriods = PERIODS_MANHA; // manha or todas/any
+
+        let slotsNeeded = isDouble ? 2 : 1;
+        
+        for (const day of DAYS) {
+          if (slotsNeeded <= 0) break;
+          for (let i = 0; i < shiftPeriods.length; i++) {
+            const p = shiftPeriods[i];
+            
+            // Re-check constraints so we don't pick impossible slots for 5-class shifts
+            if (turma.dailyClassCount === 5) {
+              if (turma.shift === 'manha' && p === 6) continue;
+              if (turma.shift === 'tarde' && p === 12) continue;
+              if (turma.shift === 'noite' && p === 18 && !enableNoiteAsynchronous) continue;
+            }
+
+            const slotId = `${day.id}-${p}`;
+            if (!newSchedules[turmaId]) newSchedules[turmaId] = {};
+            
+            const existing = newSchedules[turmaId][slotId];
+            if (!existing || (!existing.teacherId && !existing.subjectId)) {
+                // Free slot found in this class!
+              if (slotsNeeded > 0) {
+                 newSchedules[turmaId][slotId] = { subjectId, teacherId };
+                 slotsNeeded--;
+                 if (slotsNeeded <= 0) break;
+              }
+            }
+          }
+        }
+      }
+      
+      // Since we forced them, clear the pending ones and mark solved
+      pendingLessons.length = 0;
+      solved = true;
+    }
+
+    setSchedules(newSchedules);
+
+    setAutoGenResults({
+      solved,
+      scannedCount: requirements.length,
+      placedCount: autoGenForceConflicts ? requirements.length : (requirements.length - failedLessonsCount),
+      pending: pendingLessons,
+      errors
+    });
       
       setIsAutoGenerateModalOpen(false);
       setIsAutoGenerateResultsModalOpen(true);
@@ -4635,10 +4588,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       ${asyncCellHtml}
                     </tr>
                     ${pIndex === 2 ? `
-                      <tr class="interval-row" style="height: 7pt;">
-                        <td colspan="2" class="p-time-cell" style="background: #cbd5e1; font-weight: 900; font-size: 4.5pt; color: #1e293b; height: 7pt; padding: 0;">${shift === 'manha' ? '10h-10h20' : shift === 'tarde' ? '15h30-15h50' : '21h15-21h30'}</td>
-                        <td class="slot-cell" style="background: #cbd5e1; text-align: center; font-weight: 900; font-size: 5.5pt; letter-spacing: 0.2em; color: #1e293b; height: 7pt; padding: 0;">INTERVALO</td>
-                        ${isNightAsync ? `<td class="slot-cell" style="background: #cbd5e1;"></td>` : ''}
+                      <tr class="interval-row" style="height: 9pt;">
+                        <td colspan="2" class="p-time-cell" style="background: #cbd5e1 !important; font-weight: 900; font-size: 5.5pt; color: #1e293b; height: 9pt; padding: 0;">${shift === 'manha' ? '10h-10h20' : shift === 'tarde' ? '15h30-15h50' : '21h15-21h30'}</td>
+                        <td class="slot-cell" style="background: #cbd5e1 !important; text-align: center; font-weight: 900; font-size: 6.5pt; letter-spacing: 0.2em; color: #1e293b; height: 9pt; padding: 0;">INTERVALO</td>
+                        ${isNightAsync ? `<td class="slot-cell" style="background: #cbd5e1 !important;"></td>` : ''}
                       </tr>
                     ` : ''}
                   `;
@@ -4872,7 +4825,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               .p-num-cell {
                 font-size: 6pt;
                 font-weight: 800;
-                background-color: #f8fafc !important;
+                background-color: transparent !important;
                 height: 11pt;
               }
               .p-time-cell {
@@ -4896,6 +4849,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 overflow: hidden; 
                 text-overflow: ellipsis;
                 color: black;
+                text-align: center;
               }
               .extra-info {
                 font-weight: 700; 
@@ -4915,25 +4869,25 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 text-transform: none;
               }
               .interval-row {
-                height: 5.5pt !important;
+                height: 8pt !important;
                 background-color: #cbd5e1 !important;
               }
               .interval-time {
-                font-size: 4.5pt;
+                font-size: 5.5pt;
                 font-weight: 900;
                 color: #1e293b;
-                height: 5.5pt !important;
-                line-height: 5.5pt;
+                height: 8pt !important;
+                line-height: 8pt;
                 background-color: #cbd5e1 !important;
               }
               .interval-text {
-                font-size: 5pt;
+                font-size: 6.5pt;
                 font-weight: 950;
                 color: #1e293b;
                 letter-spacing: 0.5em;
                 text-transform: uppercase;
-                height: 5.5pt !important;
-                line-height: 5.5pt;
+                height: 8pt !important;
+                line-height: 8pt;
                 background-color: #cbd5e1 !important;
               }
               .print-footer {
@@ -5047,10 +5001,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         </td>
                       </tr>
                       ${pIndex === 2 ? `
-                        <tr class="interval-row" style="height: 3.5pt;">
-                          ${shiftTurmas.map(() => `<td class="slot-cell" style="background: #cbd5e1; text-align: center; font-size: 3pt; font-weight: 900; color: #1e293b; height: 3.5pt; padding: 0;">INTERVALO</td>`).join('')}
-                          <td class="time-info" style="background: #94a3b8; padding: 0; height: 3.5pt;">
-                            <span class="p-time" style="font-size: 2.5pt; font-weight: 900; color: #000000; line-height: 1; display: block; text-align: center;">${shift === 'manha' ? '10h-10h20' : shift === 'tarde' ? '15h30-15h50' : '21h15-21h30'}</span>
+                        <tr class="interval-row" style="height: 6pt;">
+                          ${shiftTurmas.map(() => `<td class="slot-cell" style="background: #cbd5e1 !important; text-align: center; font-size: 4.5pt; font-weight: 900; color: #1e293b; height: 6pt; padding: 0;">INTERVALO</td>`).join('')}
+                          <td style="background: #cbd5e1 !important; padding: 0; height: 6pt;">
+                            <span class="p-time" style="font-size: 4pt; font-weight: 900; color: #000000; line-height: 1; display: block; text-align: center;">${shift === 'manha' ? '10h-10h20' : shift === 'tarde' ? '15h30-15h50' : '21h15-21h30'}</span>
                           </td>
                         </tr>
                       ` : ''}
@@ -5181,6 +5135,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 overflow: hidden;
                 text-overflow: ellipsis;
                 padding: 0 1px;
+                text-align: center;
               }
               
               .prof-name { 
@@ -5194,11 +5149,12 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 margin-top: 0.2px;
                 display: flex;
                 align-items: center;
+                justify-content: center;
                 gap: 2px;
               }
               
               .time-info { 
-                background-color: #f8fafc;
+                background-color: transparent !important;
                 line-height: 1.05;
                 height: 10pt;
               }
@@ -5312,8 +5268,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               .p-num-cell { font-weight: 700; color: #2563eb !important; font-size: 6.5pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               .p-time-cell { color: #64748b !important; font-size: 6pt; font-weight: 500; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               .slot-cell { text-align: left; padding-left: 6px; overflow: hidden; }
-              .subj-name { font-weight: 800; font-size: 8pt; text-transform: uppercase; margin-bottom: 0px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-              .prof-name { font-size: 7.5pt; color: black !important; font-weight: 600; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-print-color-adjust: exact; print-color-adjust: exact; display: flex; align-items: center; gap: 2px; }
+              .subj-name { font-weight: 800; font-size: 8pt; text-transform: uppercase; margin-bottom: 0px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+              .prof-name { font-size: 7.5pt; color: black !important; font-weight: 600; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-print-color-adjust: exact; print-color-adjust: exact; display: flex; align-items: center; justify-content: center; gap: 2px; }
               .day-end { border-bottom: 1.2pt solid black; }
               .print-footer { margin-top: 2px; text-align: right; font-size: 6.5pt; color: black; font-weight: 600; page-break-inside: avoid; }
             </style>
@@ -5687,6 +5643,66 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     }
   };
 
+  const handleForceAllocatePending = () => {
+    if (!autoGenResults || autoGenResults.pending.length === 0) return;
+
+    setSchedules((prev: AllSchedules) => {
+      const next = JSON.parse(JSON.stringify(prev)); // Deep copy to be safe
+      
+      const pList = [...autoGenResults.pending];
+      
+      for (const pending of pList) {
+        const { turmaId, subjectId, teacherId, isDouble } = pending;
+        const turma = turmas.find(t => t.id === turmaId);
+        if (!turma) continue;
+
+        let shiftPeriods: number[] = [];
+        if (turma.shift === 'noite') shiftPeriods = PERIODS_NOITE;
+        else if (turma.shift === 'tarde') shiftPeriods = PERIODS_TARDE;
+        else shiftPeriods = PERIODS_MANHA; // manha or todas/any
+
+        let slotsNeeded = isDouble ? 2 : 1;
+        
+        for (const day of DAYS) {
+          if (slotsNeeded <= 0) break;
+          for (let i = 0; i < shiftPeriods.length; i++) {
+            const p = shiftPeriods[i];
+            
+            // Re-check constraints so we don't pick impossible slots for 5-class shifts
+            if (turma.dailyClassCount === 5) {
+              if (turma.shift === 'manha' && p === 6) continue;
+              if (turma.shift === 'tarde' && p === 12) continue;
+              if (turma.shift === 'noite' && p === 18 && !enableNoiteAsynchronous) continue;
+            }
+
+            const slotId = `${day.id}-${p}`;
+            if (!next[turmaId]) next[turmaId] = {};
+            
+            const existing = next[turmaId][slotId];
+            if (!existing || (!existing.teacherId && !existing.subjectId)) {
+                // Free slot found in this class!
+              if (slotsNeeded > 0) {
+                 next[turmaId][slotId] = { subjectId, teacherId };
+                 slotsNeeded--;
+                 if (slotsNeeded <= 0) break;
+              }
+            }
+          }
+        }
+      }
+      return next;
+    });
+
+    setAutoGenResults(prev => prev ? {
+        ...prev,
+        solved: true,
+        placedCount: prev.scannedCount, // technically forced
+        pending: [] // clear pending since we just forced them
+    } : null);
+
+    setIsAutoGenerateResultsModalOpen(false);
+  };
+  
   const handlePrintMissingClassesReport = () => {
     // Collect all missing classes across the configured subset of turmas
     const pendingItems: { turma: string, shift: string, subject: string, expected: number, allocated: number, missing: number, extra: number }[] = [];
@@ -6037,7 +6053,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       <div className="flex-1 flex flex-col h-full w-full overflow-hidden relative">
         <div className={isHorariosRoute ? "flex-1 flex flex-col space-y-2 animate-in fade-in duration-700 pb-1 overflow-hidden" : "hidden"}>
       {/* Action Bar / Navigation (Optimized For Compactness & Responsive Layout) */}
-      <div className="bg-white rounded-xl border-2 border-slate-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] print:hidden flex flex-col overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm print:hidden flex flex-col overflow-hidden">
         
         {/* ==================== MOBILE TOP BAR (hidden on desktop) ==================== */}
         <div className="flex md:hidden items-center justify-between p-1.5 px-2.5 gap-1 shadow-xs bg-white">
@@ -6131,7 +6147,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 <button 
                   onClick={() => {
                     setNewTurmaShift('todas');
-                    setIsAddingTurma(true);
+                    openSidebarModal('turma');
                     setIsMobileMenuOpen(false);
                   }}
                   className="flex items-center gap-1.5 p-1 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[9px] font-bold text-slate-700 transition shadow-xxs"
@@ -6141,7 +6157,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 </button>
                 <button 
                   onClick={() => {
-                    setIsAddingSubject(true);
+                    openSidebarModal('disciplina');
                     setIsMobileMenuOpen(false);
                   }}
                   className="flex items-center gap-1.5 p-1 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[9px] font-bold text-slate-700 transition shadow-xxs"
@@ -6151,7 +6167,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 </button>
                 <button 
                   onClick={() => {
-                    setIsAddingTeacher(true);
+                    openSidebarModal('professor');
                     setIsMobileMenuOpen(false);
                   }}
                   className="flex items-center gap-1.5 p-1 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[9px] font-bold text-slate-700 transition shadow-xxs"
@@ -6161,7 +6177,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 </button>
                 <button 
                   onClick={() => {
-                    setIsAddingRoom(true);
+                    openSidebarModal('sala');
                     setIsMobileMenuOpen(false);
                   }}
                   className="flex items-center gap-1.5 p-1 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[9px] font-bold text-slate-700 transition shadow-xxs"
@@ -6348,13 +6364,6 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 <div className="text-[7.5px] font-black text-slate-505 text-slate-500 uppercase px-1">Especiais:</div>
                 <div className="flex items-center gap-1 flex-wrap">
                   <button 
-                    onClick={() => { handleLoadHealedBackup(); setIsMobileMenuOpen(false); }}
-                    className="p-1 bg-amber-50 text-amber-800 hover:bg-amber-100 rounded border border-amber-200 flex items-center gap-0.5 font-bold text-[8.5px] uppercase"
-                    title="Demo Completa"
-                  >
-                    <Sparkles className="w-3 h-3 text-amber-500 animate-pulse shrink-0" /> Demo
-                  </button>
-                  <button 
                     onClick={() => { setIsWhatsAppModalOpen(true); setIsMobileMenuOpen(false); }}
                     className="p-1 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-250 rounded active:scale-95 transition"
                     title="Enviar WhatsApp"
@@ -6377,8 +6386,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
         {/* ==================== DESKTOP CONTROLS ROW (hidden on mobile) ==================== */}
         {/* Header Row: Navigation & Configuration */}
-        <div className="hidden md:flex flex-wrap items-center justify-between p-1.5 px-3 gap-2 border-b-2 border-slate-100">
-          <div className="flex flex-wrap items-center gap-2.5">
+        <div className="hidden md:flex flex-wrap items-center justify-between p-1 px-2 gap-1.5 border-b-2 border-slate-100">
+          <div className="flex flex-wrap items-center gap-1.5">
             <div className="flex flex-col">
               <h1 className="text-xs font-black text-slate-900 uppercase tracking-tighter leading-none flex items-center gap-1.5">
                 <div className="w-[3px] h-3.5 bg-indigo-600 rounded-full"></div>
@@ -6391,47 +6400,47 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
             {/* View Mode & Shift Selectors */}
             <div className="flex flex-wrap items-center gap-2 md:pl-2.5 md:border-l-2 md:border-slate-100">
-              <div className="flex bg-slate-100 p-0.5 rounded-lg h-8 items-center">
+              <div className="flex bg-slate-100 p-0.5 rounded-lg h-7 items-center">
                 <button 
                   onClick={() => setViewMode('turmas')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase transition-all ${viewMode === 'turmas' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all ${viewMode === 'turmas' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                   <Calendar className="w-3.5 h-3.5" />
                   Turmas
                 </button>
                 <button 
                   onClick={() => setViewMode('rooms')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase transition-all ${viewMode === 'rooms' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all ${viewMode === 'rooms' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                   <DoorClosed className="w-3.5 h-3.5" />
                   Salas Esp.
                 </button>
               </div>
 
-              <div className="flex bg-slate-100 p-0.5 rounded-lg h-8 items-center">
+              <div className="flex bg-slate-100 p-0.5 rounded-lg h-7 items-center">
                 <button 
                   onClick={() => setImportShift('manha')}
-                  className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase transition-all ${importShift === 'manha' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                  className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all ${importShift === 'manha' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                   Manhã
                 </button>
                 <button 
                   onClick={() => setImportShift('tarde')}
-                  className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase transition-all ${importShift === 'tarde' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                  className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all ${importShift === 'tarde' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                   Tarde
                 </button>
                 {enableNoite && (
                   <button 
                     onClick={() => setImportShift('noite')}
-                    className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase transition-all ${importShift === 'noite' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all ${importShift === 'noite' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     Noite
                   </button>
                 )}
               </div>
 
-              <label className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100/80 px-2.5 py-1 rounded-lg cursor-pointer transition-all active:scale-95 h-8 shadow-xs">
+              <label className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100/80 px-2 py-0.5 rounded-lg cursor-pointer transition-all active:scale-95 h-7 shadow-xs">
                 <input 
                   type="checkbox" 
                   checked={enableNoite} 
@@ -6448,7 +6457,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               </label>
 
               {enableNoite && (
-                <label className="flex items-center gap-1.5 bg-[#faf5ff] border border-[#e9d5ff] hover:bg-[#f3e8ff] px-2.5 py-1 rounded-lg cursor-pointer transition-all active:scale-95 h-8 shadow-xs animate-in fade-in slide-in-from-left-2 duration-200">
+                <label className="flex items-center gap-1.5 bg-[#faf5ff] border border-[#e9d5ff] hover:bg-[#f3e8ff] px-2.5 py-0.5 rounded-lg cursor-pointer transition-all active:scale-95 h-7 shadow-xs animate-in fade-in slide-in-from-left-2 duration-200">
                   <input 
                     type="checkbox" 
                     checked={enableNoiteAsynchronous} 
@@ -6490,7 +6499,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
              {/* School Name Action Component */}
              <div className="relative">
               {showSchoolInput ? (
-                <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border-2 border-slate-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-in zoom-in-95 duration-200 h-8">
+                <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-0.5 border-2 border-slate-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-in zoom-in-95 duration-200 h-7">
                   <input 
                     type="text"
                     value={tempSchoolName}
@@ -6540,7 +6549,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               ) : (
                 <button 
                   onClick={() => { setTempSchoolName(schoolName); setShowSchoolInput(true); }}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border border-dashed border-emerald-200 text-emerald-600 hover:border-emerald-505 hover:text-emerald-700 bg-emerald-50/10 h-8"
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all border border-dashed border-emerald-200 text-emerald-600 hover:border-emerald-505 hover:text-emerald-700 bg-emerald-50/10 h-7"
                   title="Alterar Nome do Colégio"
                 >
                   <School className="w-3.5 h-3.5" />
@@ -6552,7 +6561,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
              {/* Logo Action Component */}
              <div className="relative">
               {showLogoInput ? (
-                <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border-2 border-slate-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-in zoom-in-95 duration-200 h-8">
+                <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-0.5 border-2 border-slate-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-in zoom-in-95 duration-200 h-7">
                   <input 
                     type="text"
                     value={tempLogoUrl}
@@ -6582,7 +6591,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               ) : (
                 <button 
                   onClick={() => { setTempLogoUrl(logoUrl); setShowLogoInput(true); }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border border-dashed h-8 ${logoUrl ? "border-indigo-200 text-indigo-400 hover:border-indigo-400 hover:text-indigo-600" : "border-slate-200 text-slate-400 hover:border-slate-400 hover:text-slate-600"}`}
+                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all border border-dashed h-7 ${logoUrl ? "border-indigo-200 text-indigo-400 hover:border-indigo-400 hover:text-indigo-600" : "border-slate-200 text-slate-400 hover:border-slate-400 hover:text-slate-600"}`}
                 >
                   <ImageIcon className="w-3.5 h-3.5" />
                   {logoUrl ? 'Logo Escola' : 'Logo'}
@@ -6594,7 +6603,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
              <div className="relative">
                <button 
                  onClick={() => setIsAcademicConfigOpen(true)}
-                 className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-slate-700 transition-colors cursor-pointer group h-8"
+                 className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-slate-700 transition-colors cursor-pointer group h-7"
                  title="Configurar Período Letivo Vigente"
                >
                   <Calendar className="w-3.5 h-3.5 text-indigo-500 group-hover:scale-110 transition-transform" />
@@ -6611,7 +6620,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 setWizardStep(1);
                 setIsWizardOpen(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-1 bg-purple-600 border border-purple-950 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-purple-700 transition-all cursor-pointer shadow-xs h-8 relative overflow-hidden"
+              className="flex items-center gap-1.5 px-2 py-0.5 bg-purple-600 border border-purple-950 rounded-lg text-[8.5px] font-black uppercase tracking-wider text-white hover:bg-purple-700 transition-all cursor-pointer shadow-xs h-7 relative overflow-hidden"
               title="Passo a Passo Assistido para Gerar Horário"
             >
               <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
@@ -6622,7 +6631,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             <button 
               id="btn-missing-classes-header"
               onClick={() => setIsShowingMissingClasses(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg text-[9px] font-black uppercase tracking-widest text-amber-800 hover:border-amber-500 hover:bg-amber-100 transition-all shadow-xs h-8 cursor-pointer"
+              className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-lg text-[8.5px] font-black uppercase tracking-widest text-amber-800 hover:border-amber-500 hover:bg-amber-100 transition-all shadow-xs h-7 cursor-pointer"
               title="Painel de Visão Geral - Gráficos e Aulas Alocadas"
             >
               <BarChart2 className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
@@ -6633,7 +6642,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             <button 
               id="btn-auto-generate-schedule"
               onClick={() => setIsAutoGenerateModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1 bg-emerald-600 border border-emerald-950 rounded-lg text-[9px] font-black uppercase tracking-widest text-white hover:bg-emerald-700 transition-all shadow-xs h-8 cursor-pointer"
+              className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-600 border border-emerald-950 rounded-lg text-[8.5px] font-black uppercase tracking-widest text-white hover:bg-emerald-700 transition-all shadow-xs h-7 cursor-pointer"
               title="Gerar Horários Automaticamente"
             >
               <Sparkles className="w-3.5 h-3.5 text-emerald-200 animate-pulse" />
@@ -6644,7 +6653,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             <button 
               id="btn-mudancas"
               onClick={() => setIsMudancasModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 border border-blue-950 rounded-lg text-[9px] font-black uppercase tracking-widest text-white hover:bg-blue-700 transition-all shadow-xs h-8 cursor-pointer"
+              className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-600 border border-blue-950 rounded-lg text-[8.5px] font-black uppercase tracking-widest text-white hover:bg-blue-700 transition-all shadow-xs h-7 cursor-pointer"
               title="Realizar Mudanças (Embaralhar horário do período atual)"
             >
               <Shuffle className="w-3.5 h-3.5 text-blue-200" />
@@ -6652,10 +6661,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             </button>
 
             {/* Salvar Botão Apenas */}
-            <div className="flex flex-col items-end gap-1 ml-1">
+            <div className="flex flex-col items-end gap-1 ml-0.5">
               <button 
                 onClick={handleSave}
-                className={`flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border border-slate-900 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[0px] active:translate-y-[0px] active:shadow-none h-8 ${
+                className={`flex items-center justify-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[8.5px] font-black uppercase tracking-widest transition-all border border-slate-900 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[0px] active:translate-y-[0px] active:shadow-none h-7 ${
                   isSaved ? 'bg-green-500 text-white border-green-700' : 'bg-indigo-600 text-white border-indigo-900'
                 }`}
               >
@@ -6668,16 +6677,16 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
         {/* ==================== DESKTOP ACTIONS ROW (hidden on mobile) ==================== */}
         {/* Action Row: Cadastros, Impressão & Backup */}
-        <div className="hidden md:flex flex-wrap items-center justify-between p-1 px-3 bg-slate-50 gap-2">
+        <div className="hidden md:flex flex-wrap items-center justify-between p-1 px-2 bg-slate-50 gap-1.5">
           <div className="flex items-center gap-1 flex-wrap">
             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mr-1 invisible sm:visible">Cadastros:</span>
             <div className="flex items-center gap-1 flex-wrap">
               <button 
                 onClick={() => {
                   setNewTurmaShift('todas');
-                  setIsAddingTurma(true);
+                  openSidebarModal('turma');
                 }}
-                className="group flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[9.5px] font-bold text-slate-600 hover:text-slate-800 transition-all shadow-xs"
+                className="group flex items-center gap-1 px-1.5 py-0.5 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[8.5px] font-bold text-slate-600 hover:text-slate-800 transition-all shadow-xs"
               >
                 <div className="p-0.5 bg-blue-50 text-blue-600 rounded group-hover:bg-blue-600 group-hover:text-white transition-colors">
                   <Calendar className="w-2.5 h-2.5" />
@@ -6685,8 +6694,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 Turmas
               </button>
               <button 
-                onClick={() => setIsAddingSubject(true)}
-                className="group flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[9.5px] font-bold text-slate-600 hover:text-slate-800 transition-all shadow-xs"
+                onClick={() => openSidebarModal('disciplina')}
+                className="group flex items-center gap-1 px-1.5 py-0.5 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[8.5px] font-bold text-slate-600 hover:text-slate-800 transition-all shadow-xs"
               >
                 <div className="p-0.5 bg-amber-50 text-amber-600 rounded group-hover:bg-amber-600 group-hover:text-white transition-colors">
                   <BookOpen className="w-2.5 h-2.5" />
@@ -6694,8 +6703,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 Disciplinas
               </button>
               <button 
-                onClick={() => setIsAddingTeacher(true)}
-                className="group flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[9.5px] font-bold text-slate-600 hover:text-slate-800 transition-all shadow-xs"
+                onClick={() => openSidebarModal('professor')}
+                className="group flex items-center gap-1 px-1.5 py-0.5 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[8.5px] font-bold text-slate-600 hover:text-slate-800 transition-all shadow-xs"
               >
                 <div className="p-0.5 bg-emerald-50 text-emerald-600 rounded group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                   <Users className="w-2.5 h-2.5" />
@@ -6703,8 +6712,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 Professores
               </button>
               <button 
-                onClick={() => setIsAddingRoom(true)}
-                className="group flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[9.5px] font-bold text-slate-600 hover:text-slate-800 transition-all shadow-xs"
+                onClick={() => openSidebarModal('sala')}
+                className="group flex items-center gap-1 px-1.5 py-0.5 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[8.5px] font-bold text-slate-600 hover:text-slate-800 transition-all shadow-xs"
               >
                 <div className="p-0.5 bg-indigo-50 text-indigo-600 rounded group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                   <DoorClosed className="w-2.5 h-2.5" />
@@ -6713,7 +6722,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               </button>
               <button 
                 onClick={() => setIsConfiguringTimeRanges(true)}
-                className="group flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[9.5px] font-bold text-slate-600 hover:text-slate-800 transition-all shadow-xs"
+                className="group flex items-center gap-1 px-1.5 py-0.5 bg-white border border-slate-200 hover:border-slate-400 rounded-md text-[8.5px] font-bold text-slate-600 hover:text-slate-800 transition-all shadow-xs"
               >
                 <div className="p-0.5 bg-red-50 text-red-600 rounded group-hover:bg-red-600 group-hover:text-white transition-colors">
                   <Clock className="w-2.5 h-2.5" />
@@ -6722,7 +6731,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               </button>
               <button 
                 onClick={() => setIsHelpModalOpen(true)}
-                className="group flex items-center gap-1 px-2 py-0.5 bg-white border border-amber-300 hover:border-amber-500 rounded-md text-[9.5px] font-bold text-amber-700 hover:text-amber-800 transition-all shadow-xs"
+                className="group flex items-center gap-1 px-1.5 py-0.5 bg-white border border-amber-300 hover:border-amber-500 rounded-md text-[8.5px] font-bold text-amber-700 hover:text-amber-800 transition-all shadow-xs"
               >
                 <div className="p-0.5 bg-amber-50 text-amber-600 rounded group-hover:bg-amber-600 group-hover:text-white transition-colors">
                   <HelpCircle className="w-2.5 h-2.5" />
@@ -6733,25 +6742,25 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 pr-3 border-r border-slate-200 flex-wrap">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mr-1 invisible sm:visible">Imprimir:</span>
+            <div className="flex items-center gap-1 pr-2 border-r border-slate-200 flex-wrap">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mr-1 invisible sm:visible">Imprimir:</span>
               <button 
                 onClick={() => setIsPrintingTurmaSelection(true)}
-                className="flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-md text-[9.5px] font-bold text-slate-600 hover:text-slate-800 transition-all"
+                className="flex items-center gap-1 px-1.5 py-0.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-md text-[8.5px] font-bold text-slate-600 hover:text-slate-800 transition-all"
               >
                 <Printer className="w-3 h-3" />
                 Individual
               </button>
               <button 
                 onClick={handlePrintLabsHorizontal}
-                className="flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md text-[9.5px] font-bold hover:bg-indigo-100 transition-all"
+                className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md text-[8.5px] font-bold hover:bg-indigo-100 transition-all"
               >
                 <Printer className="w-3 h-3" />
                 Geral Salas
               </button>
               <button 
                 onClick={handlePrintGeralTurmas}
-                className="flex items-center gap-1 px-2 py-0.5 bg-slate-900 text-white rounded-md text-[9.5px] font-bold hover:bg-black transition-all"
+                className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-900 text-white rounded-md text-[8.5px] font-bold hover:bg-black transition-all"
               >
                 <Printer className="w-3 h-3" />
                 Geral Turmas
@@ -6771,13 +6780,6 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   <FileText className="w-3.5 h-3.5" />
                   <input type="file" accept=".txt" className="hidden" onChange={handleImportBackup} />
                 </label>
-                <button 
-                  onClick={handleLoadHealedBackup}
-                  className="p-1 bg-amber-50 hover:bg-amber-100 rounded text-amber-700 hover:text-amber-800 transition-all flex items-center justify-center cursor-pointer border border-amber-200/40"
-                  title="Carregar Carga 100% Completa"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-                </button>
                 <button 
                   onClick={() => setIsWhatsAppModalOpen(true)}
                   className="p-1 hover:bg-white rounded text-emerald-600 hover:text-emerald-505 transition-all flex items-center justify-center cursor-pointer"
@@ -6830,8 +6832,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       {/* Main Content (Shifted up) */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Professional Matrix View (Matching Screenshot) */}
-        <div className="flex-1 flex flex-col bg-white rounded-xl border-2 border-slate-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] overflow-hidden print:overflow-visible print:shadow-none print:border-slate-800" id="schedule-grid">
-            <div className="p-3 border-b-2 border-slate-900 bg-slate-50 flex items-center justify-between sticky top-0 left-0 z-30 print:static print:border-b">
+        <div className="flex-1 flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden print:overflow-visible print:shadow-none print:border-slate-800" id="schedule-grid">
+            <div className="p-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between sticky top-0 left-0 z-30 print:static print:border-b">
               <div className="flex items-center gap-3">
                 {logoUrl && (
                   <div className="w-12 h-12 flex-shrink-0 bg-white border border-slate-200 rounded-lg p-1 overflow-hidden flex items-center justify-center">
@@ -6860,11 +6862,11 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             <div className="flex-1 overflow-auto custom-scrollbar">
               <table className="border-collapse border-spacing-0 table-fixed w-full">
                 <thead>
-                  <tr className="bg-slate-100 border-b-2 border-slate-900 sticky top-0 z-20">
-                    <th className="bg-slate-100 sticky left-0 z-40 border-r-2 border-slate-900 w-12 min-w-[48px] max-w-[48px]"></th>
+                  <tr className="bg-slate-100 border-b border-slate-300 sticky top-0 z-20">
+                    <th className="bg-slate-100 sticky left-0 z-40 border-r border-slate-300 w-10 min-w-[40px] max-w-[40px]"></th>
                     {viewMode === 'turmas' ? displayedTurmas.map(t => (
                       <th key={t.id} className="p-0 border-r border-slate-300 text-[10px] font-black uppercase tracking-tight text-slate-900 bg-slate-100 min-w-0">
-                        <div className="flex items-center justify-between px-2 py-3 group">
+                        <div className="flex items-center justify-between px-1 py-2 group">
                           <span className="truncate">{t.name}</span>
                           <button 
                             onClick={(e) => {
@@ -6885,13 +6887,13 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       </th>
                     )) : turmas.filter(t => t.isRoom).map(t => (
                       <th key={t.id} className="p-0 border-r border-slate-300 text-[10px] font-black uppercase tracking-tight text-white min-w-0" style={{ backgroundColor: t.color || '#6366f1' }}>
-                        <div className="flex items-center justify-center gap-1.5 px-2 py-3 group relative">
+                        <div className="flex items-center justify-center gap-1 px-1 py-2 group relative">
                           {t.icon && getRoomIcon(t.icon, "w-3 h-3 text-white opacity-90 shrink-0")}
                           <span className="truncate">{t.name}</span>
                         </div>
                       </th>
                     ))}
-                    <th className="p-3 bg-slate-200 text-[9px] font-black uppercase tracking-widest text-slate-900 sticky right-0 z-20 shadow-[-4px_0_10px_rgba(0,0,0,0.05)] w-28 min-w-[112px] max-w-[112px]">
+                    <th className="p-3 bg-slate-200 text-[9px] font-black uppercase tracking-widest text-slate-900 sticky right-0 z-20 shadow-[-4px_0_10px_rgba(0,0,0,0.05)] w-20 min-w-[80px] max-w-[80px]">
                       Horário
                     </th>
                   </tr>
@@ -6913,10 +6915,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
                         return (
                           <React.Fragment key={`${day.id}-${actualPeriod}`}>
-                            <tr className={`border-b border-slate-300 hover:bg-slate-50 transition-colors h-14 ${pIndex === lastPeriodIdx ? 'border-b-[3px] border-slate-900' : ''}`}>
+                              <tr className={`border-b border-slate-300 hover:bg-slate-50 transition-colors ${pIndex === lastPeriodIdx ? 'border-b-[3px] border-slate-900' : ''}`}>
                               {/* Day Column (Sticky Left) */}
                               {pIndex === 0 && (
-                                <td rowSpan={totalRows} className={`${day.screenBg} text-white p-0 w-12 min-w-[48px] max-w-[48px] border-r-2 border-slate-900 sticky left-0 z-40 shadow-[2px_0_10px_rgba(0,0,0,0.1)]`}>
+                                <td rowSpan={totalRows} className={`${day.screenBg} text-white p-0 w-10 min-w-[40px] max-w-[40px] border-r border-slate-300 sticky left-0 z-40 shadow-[2px_0_10px_rgba(0,0,0,0.1)]`}>
                                   <div className="flex items-center justify-center h-full w-full">
                                     <span className="text-[10px] font-black uppercase [writing-mode:vertical-lr] rotate-180 text-center tracking-widest whitespace-nowrap">
                                       {day.label}
@@ -7011,7 +7013,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                     onDragOver={(e) => handleDragOver(e, turma.id, slotId)}
                                     onDragLeave={handleDragLeave}
                                     onDrop={(e) => handleDrop(e, turma.id, slotId)}
-                                    className={`p-1.5 border-r border-slate-300 cursor-pointer transition-all group relative ${isDimmed ? 'opacity-30 grayscale-[50%]' : ''} ${
+                                    className={`p-0 px-0.5 border-r border-slate-300 cursor-pointer transition-all group relative ${isDimmed ? 'opacity-30 grayscale-[50%]' : ''} ${
                                       isLoading 
                                         ? 'bg-slate-100'
                                         : draggedOverCell?.turmaId === turma.id && draggedOverCell?.slotId === slotId
@@ -7040,10 +7042,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                         onDragEnd={handleDragEnd}
                                         className="flex flex-col items-center justify-center text-center overflow-hidden cursor-move w-full h-full select-none"
                                       >
-                                        <span className={`text-[10px] font-black uppercase leading-[1.1] mb-0.5 truncate w-full px-1 ${errorCell?.turmaId === turma.id && errorCell?.slotId === slotId ? 'text-white' : conflicts.length > 0 ? 'text-red-600' : viewMode === 'rooms' ? 'text-indigo-900' : activeSub ? 'text-emerald-800' : isGrayDay ? 'text-[#000000]' : 'text-slate-800'}`}>
+                                        <span className={`text-[8px] font-black uppercase leading-[1] mb-0 truncate w-full px-0.5 ${errorCell?.turmaId === turma.id && errorCell?.slotId === slotId ? 'text-white' : conflicts.length > 0 ? 'text-red-600' : viewMode === 'rooms' ? 'text-indigo-900' : activeSub ? 'text-emerald-800' : isGrayDay ? 'text-[#000000]' : 'text-slate-800'}`}>
                                           {viewMode === 'rooms' ? formatSubjectName(associatedTurma?.name) || 'N/A' : formatSubjectName(subject?.name)}
                                         </span>
-                                        <div className={`text-[8px] font-bold uppercase w-full flex flex-col items-center justify-center min-w-0 ${errorCell?.turmaId === turma.id && errorCell?.slotId === slotId ? 'text-red-100' : viewMode === 'rooms' ? 'text-indigo-400' : isGrayDay ? 'text-[#2f2f2f]' : 'text-slate-500'}`}>
+                                        <div className={`text-[7px] font-bold uppercase w-full flex flex-col items-center justify-center min-w-0 leading-[1] ${errorCell?.turmaId === turma.id && errorCell?.slotId === slotId ? 'text-red-100' : viewMode === 'rooms' ? 'text-indigo-400' : isGrayDay ? 'text-[#2f2f2f]' : 'text-slate-500'}`}>
                                           {activeSub ? (
                                             <>
                                               <span className="line-through opacity-70 truncate w-full px-0.5 leading-[1]">{formatTeacherName(teacher?.name)}</span>
@@ -7078,14 +7080,14 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                         )}
                                       </div>
                                     ) : (
-                                      <div className="h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <div className="h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                         <Plus className="w-3.5 h-3.5 text-slate-400" />
                                       </div>
                                     )}
                                   </td>
                                 );
                               })}
-                              <td className={`p-1.5 border-l border-slate-400 sticky right-0 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)] w-28 min-w-[112px] max-w-[112px] ${isGrayDay ? 'bg-[#d5dee8]' : 'bg-slate-50'}`}>
+                              <td className={`p-0.5 border-l border-slate-400 sticky right-0 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)] w-20 min-w-[80px] max-w-[80px] ${isGrayDay ? 'bg-[#d5dee8]' : 'bg-slate-50'}`}>
                                 <div className="flex flex-col items-center justify-center gap-0.5">
                                   <span className={`text-[9px] font-black uppercase shrink-0 ${isGrayDay ? 'text-[#000000]' : (importShift === 'noite' && enableNoiteAsynchronous && pIndex === 5) ? 'text-violet-650' : importShift === 'noite' ? 'text-indigo-600' : importShift === 'manha' ? 'text-blue-600' : 'text-red-500'}`}>
                                     {importShift === 'noite' && enableNoiteAsynchronous && pIndex === 5 ? 'ASSÍNCRONA' : `${pIndex + 1}ª aula`}
@@ -7097,16 +7099,15 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                               </td>
                             </tr>
                             {pIndex === 2 && (
-                              <tr className={`border-b-2 border-slate-400 h-5 md:h-6 ${isGrayDay ? 'bg-[#9cb0c5]' : 'bg-slate-200'}`}>
+                              <tr className={`border-b-2 border-slate-400 h-auto ${isGrayDay ? 'bg-[#9cb0c5]' : 'bg-slate-200'}`}>
                                 {(viewMode === 'turmas' ? displayedTurmas : turmas.filter(t => t.isRoom)).map(turma => (
-                                  <td key={`intervalo-${turma.id}`} className="border-r border-slate-300 text-center py-0.5">
-                                    <span className="text-[7.5px] md:text-[8px] font-extrabold text-slate-700 uppercase tracking-widest">Intervalo</span>
+                                  <td key={`intervalo-${turma.id}`} className="border-r border-slate-300 text-center py-0 leading-[0]">
+                                    <span className="text-[7.5px] md:text-[8px] font-extrabold text-slate-700 uppercase tracking-widest leading-none">Intervalo</span>
                                   </td>
                                 ))}
-                                <td className={`p-0 sticky right-0 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)] border-l border-slate-350 w-28 min-w-[112px] max-w-[112px] ${isGrayDay ? 'bg-[#9cb0c5]' : 'bg-slate-200'}`}>
-                                  <div className="flex flex-col items-center justify-center p-0.5">
-                                    <span className={`text-[7.5px] font-black uppercase leading-tight ${isGrayDay ? 'text-[#1a1a1a]' : 'text-slate-700'}`}>Intervalo</span>
-                                    <span className={`text-[6.5px] font-bold leading-none ${isGrayDay ? 'text-[#000000]' : 'text-slate-600'}`}>{importShift === 'noite' ? '21h15 - 21h30' : importShift === 'manha' ? '10h - 10h20' : '15h30 - 15h50'}</span>
+                                <td className={`p-0 sticky right-0 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)] border-l border-slate-350 w-20 min-w-[80px] max-w-[80px] ${isGrayDay ? 'bg-[#9cb0c5]' : 'bg-slate-200'} leading-[0]`}>
+                                  <div className="flex items-center justify-center p-0 h-full py-1">
+                                    <span className={`text-[9px] md:text-[10px] font-black leading-none ${isGrayDay ? 'text-[#1a1a1a]' : 'text-slate-700'}`}>{importShift === 'noite' ? '21h15 - 21h30' : importShift === 'manha' ? '10h - 10h20' : '15h30 - 15h50'}</span>
                                   </div>
                                 </td>
                               </tr>
@@ -7250,7 +7251,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     <button 
                       onClick={() => {
                         setSelectedSlot(null);
-                        setIsAddingSubject(true);
+                        openSidebarModal('disciplina');
                       }}
                       className="text-[9px] font-bold text-[#657c36] hover:underline"
                     >
@@ -7375,7 +7376,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   <button 
                     onClick={() => {
                       setSelectedSlot(null);
-                      setIsAddingTeacher(true);
+                      openSidebarModal('professor');
                     }}
                     className="text-[9px] font-bold text-[#657c36] hover:underline"
                   >
@@ -8387,32 +8388,32 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       {/* Turmas Management Modal */}
       <AnimatePresence>
         {(isAddingTurma || isAlunosRoute) && (
-          <div className={isAlunosRoute ? "flex-1 w-full bg-slate-50 flex items-start justify-center p-4 md:p-8 animate-in fade-in overflow-y-auto" : "fixed inset-0 z-[85] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"}>
+          <div className="fixed inset-y-0 right-0 z-[85] flex w-[480px] bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.15)] pointer-events-auto border-l border-slate-200">
             <motion.div 
-              initial={isAlunosRoute ? {} : { opacity: 0, scale: 0.9 }}
-              animate={isAlunosRoute ? {} : { opacity: 1, scale: 1 }}
-              exit={isAlunosRoute ? {} : { opacity: 0, scale: 0.9 }}
-              className={`bg-white shadow-2xl space-y-6 flex flex-col ${isAlunosRoute ? 'rounded-[2rem] p-8 w-full max-w-5xl border border-slate-200 min-h-[85vh]' : 'rounded-3xl p-8 w-full max-w-md'}`}
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+              className={`bg-white flex flex-col h-full p-6 w-full max-h-screen overflow-y-auto custom-scrollbar`}
             >
-              <div className="flex justify-between items-center shrink-0">
-                <h3 className="text-xl font-black text-slate-900 uppercase">
+              <div className="flex justify-between items-center shrink-0 border-b border-slate-100 pb-4">
+                <h3 className="text-lg font-black text-slate-900 uppercase">
                   {editingTurmaId ? 'Editar Turma' : 'Gerenciar Turmas'}
                 </h3>
-                {!isAlunosRoute && (
                 <button 
                   onClick={() => {
+                    if (isAlunosRoute) navigate('/horarios');
                     setIsAddingTurma(false);
                     setEditingTurmaId(null);
                     setNewTurmaName('');
                   }} 
-                  className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-500"
+                  className="p-1.5 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-500 transition-colors"
                 >
-                  ×
+                  <X className="w-5 h-5" />
                 </button>
-                )}
               </div>
 
-              <div className={`space-y-4 flex-1 flex flex-col ${isAlunosRoute ? 'min-h-0' : ''}`}>
+              <div className={`space-y-4 flex-1 flex flex-col pt-4`}>
                 <div className="grid grid-cols-1 gap-2">
                   <div className="flex gap-2">
                       <input 
@@ -8459,7 +8460,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                       />
                       <span className="text-[11px] font-black text-slate-500 uppercase">
-                        Ensino Técnico / Profissionalizante (Com Marketing)
+                        Ensino Técnico / Profissionalizante (Com {techCourseName})
                       </span>
                     </label>
                   </div>
@@ -8482,7 +8483,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                     <span className="text-xs font-black text-slate-800">{turma.name}</span>
                                     {turma.isTechnical && (
                                       <span className="text-[8px] bg-indigo-50 text-indigo-700 font-black px-1.5 py-0.5 rounded uppercase tracking-wider border border-indigo-100">
-                                        Técnico
+                                        {techCourseName}
                                       </span>
                                     )}
                                   </div>
@@ -8759,20 +8760,21 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       {/* Teachers Management Modal */}
       <AnimatePresence>
         {(isAddingTeacher || isProfessoresRoute) && (
-          <div className={isProfessoresRoute ? "flex-1 w-full bg-slate-50 flex items-start justify-center p-4 md:p-8 overflow-y-auto animate-in fade-in" : "fixed inset-0 z-[85] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"}>
+          <div className={`fixed inset-y-0 right-0 z-[85] flex ${isProfessoresRoute ? 'w-[800px]' : 'w-[500px]'} bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.15)] pointer-events-auto border-l border-slate-200`}>
             <motion.div 
-              initial={isProfessoresRoute ? {} : { opacity: 0, scale: 0.9 }}
-              animate={isProfessoresRoute ? {} : { opacity: 1, scale: 1 }}
-              exit={isProfessoresRoute ? {} : { opacity: 0, scale: 0.9 }}
-              className={`bg-white shadow-2xl overflow-hidden flex flex-col min-h-[85vh] ${isProfessoresRoute ? 'rounded-[2rem] w-full max-w-5xl border border-slate-200' : 'rounded-3xl w-full max-w-lg'}`}
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+              className={`bg-white flex flex-col h-full p-6 pt-4 w-full max-h-screen overflow-y-auto custom-scrollbar`}
             >
-              <div className="flex justify-between items-center px-8 pt-8 shrink-0">
-                <h3 className="text-xl font-black text-slate-900 uppercase">
+              <div className="flex justify-between items-center pb-4 border-b border-slate-100 shrink-0">
+                <h3 className="text-lg font-black text-slate-900 uppercase">
                   {editingTeacherId ? 'Editar Professor' : 'Gerenciar Professores'}
                 </h3>
-                {!isProfessoresRoute && (
                 <button 
                   onClick={() => {
+                    if (isProfessoresRoute) navigate('/horarios');
                     setIsAddingTeacher(false);
                     setEditingTeacherId(null);
                     setNewTeacherName('');
@@ -8785,15 +8787,14 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     setNewTeacherSchoolWorkloadTarde('');
                     setNewTeacherSchoolWorkloadNoite('');
                   }} 
-                  className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-500"
+                  className="p-1.5 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-500 transition-colors"
                 >
-                  ×
+                  <X className="w-5 h-5" />
                 </button>
-                )}
               </div>
 
-              <div className={`p-8 pt-4 space-y-6 flex-1 flex flex-col ${!isProfessoresRoute ? 'overflow-y-auto custom-scrollbar max-h-[80vh]' : 'min-h-0'}`}>
-                <div className="space-y-4 shrink-0">
+              <div className={`pt-4 space-y-6 flex-1 flex flex-col`}>
+                <div className="space-y-4 shrink-0 flex-1 flex flex-col">
                   {subjects.length === 0 ? (
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col items-center gap-3 text-center">
                     <AlertCircle className="w-8 h-8 text-amber-500" />
@@ -8811,8 +8812,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     </button>
                   </div>
                 ) : (
-                  <>
-                    <div className="space-y-4">
+                  <div className={isProfessoresRoute ? "flex w-full h-full gap-6 overflow-hidden" : "flex flex-col w-full"}>
+                    <div className={isProfessoresRoute ? "w-[380px] shrink-0 overflow-y-auto pr-2 custom-scrollbar space-y-4" : "space-y-4"}>
                       {/* Nome do Professor */}
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 block">Nome do Professor</label>
@@ -9347,7 +9348,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       </button>
                     </div>
 
-                    <div className="flex flex-wrap gap-1 pb-1">
+                  <div className={isProfessoresRoute ? "flex-1 min-w-0 flex flex-col h-full pl-6 border-l border-slate-100" : "mt-2 flex flex-col"}>
+                    <div className="flex flex-wrap gap-1 pb-1 shrink-0">
                       {['Todos', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')].map(letter => (
                         <button
                           key={letter}
@@ -9428,7 +9430,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         );
                       })}
                     </div>
-                  </>
+                  </div>
+                </div>
                 )}
               </div>
             </div>
@@ -9440,12 +9443,13 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       {/* Subjects Management Modal */}
       <AnimatePresence>
         {(isAddingSubject || isDisciplinasRoute) && (
-          <div className={isDisciplinasRoute ? "flex-1 w-full bg-slate-50 flex items-start justify-center p-4 md:p-8 animate-in fade-in overflow-y-auto" : "fixed inset-0 z-[85] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"}>
+          <div className={`fixed inset-y-0 right-0 z-[85] flex ${isDisciplinasRoute ? 'w-[800px]' : 'w-[500px]'} bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.15)] pointer-events-auto border-l border-slate-200`}>
             <motion.div 
-              initial={isDisciplinasRoute ? {} : { opacity: 0, scale: 0.95 }}
-              animate={isDisciplinasRoute ? {} : { opacity: 1, scale: 1 }}
-              exit={isDisciplinasRoute ? {} : { opacity: 0, scale: 0.95 }}
-              className={`bg-white font-sans flex flex-col ${isDisciplinasRoute ? 'rounded-[2rem] p-8 w-full max-w-5xl border border-slate-200 shadow-sm min-h-[85vh]' : 'rounded-3xl p-6 w-full max-w-2xl shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto custom-scrollbar'}`}
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+              className={`bg-white font-sans flex flex-col h-full p-6 w-full max-h-screen overflow-y-auto custom-scrollbar`}
             >
               {/* Header */}
               <div className="flex justify-between items-start border-b border-slate-100 pb-3 shrink-0">
@@ -9462,9 +9466,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     </p>
                   </div>
                 </div>
-                {!isDisciplinasRoute && (
                 <button 
                   onClick={() => {
+                    if (isDisciplinasRoute) navigate('/horarios');
                     setIsAddingSubject(false);
                     setEditingSubjectId(null);
                     setNewSubjectName('');
@@ -9483,24 +9487,24 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 >
                   <X className="w-4 h-4" />
                 </button>
-                )}
               </div>
 
-              {/* List of existing subjects (moved to top for better UX) */}
-              <div className={`flex-1 flex flex-col space-y-4 ${isDisciplinasRoute ? 'overflow-y-auto pr-2' : ''}`}>
-                <div className="pb-3 border-b border-slate-100 shrink-0">
-                  <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2 px-1">Disciplinas Já Cadastradas</label>
-                <div className="max-h-32 overflow-y-auto pr-2 custom-scrollbar">
+              {/* Side-by-side layout string */}
+              <div className={`flex-1 flex ${isDisciplinasRoute ? 'flex-row gap-6 h-full overflow-hidden' : 'flex-col space-y-4'} pt-4`}>
+                
+                <div className={isDisciplinasRoute ? "flex-1 min-w-0 flex flex-col h-full border-r border-slate-100 pr-6" : "pb-3 border-b border-slate-100 shrink-0 flex flex-col"}>
+                  <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block mb-2 px-1 shrink-0">Disciplinas Já Cadastradas</label>
+                <div className={`overflow-y-auto pr-2 custom-scrollbar ${isDisciplinasRoute ? 'flex-1 min-h-0' : 'max-h-60'}`}>
                   {subjects.length === 0 ? (
                     <div className="p-3 text-center text-[10px] font-bold text-slate-400 uppercase">
                       Nenhuma disciplina cadastrada
                     </div>
                   ) : (
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className={isDisciplinasRoute ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 content-start" : "grid grid-cols-2 gap-2"}>
                       {subjects.sort((a,b) => a.name.localeCompare(b.name)).map(s => (
-                        <div key={s.id} className="flex flex-col gap-0.5 p-1.5 px-2 bg-slate-50 border border-slate-200 rounded-lg group hover:border-[#657c36] hover:bg-white transition-all">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-black text-slate-700 uppercase cursor-default">{s.name}</span>
+                        <div key={s.id} className="flex flex-col min-w-0 break-words gap-0.5 p-1.5 px-2 bg-slate-50 border border-slate-200 rounded-lg group hover:border-[#657c36] hover:bg-white transition-all">
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <span className="text-[10px] font-black text-slate-700 uppercase cursor-default truncate">{s.name}</span>
                             <div className="flex shrink-0">
                               <button onClick={() => startEditSubject(s)} className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-[#657c36] cursor-pointer">
                                 <Pencil className="w-3 h-3" />
@@ -9514,7 +9518,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                             <span className="text-[8px] font-bold text-slate-400">Padrão: {s.workload}</span>
                             {s.workloadFundamental && <span className="text-[8px] font-bold text-emerald-600">Fund: {s.workloadFundamental}</span>}
                             {s.workloadMedio && <span className="text-[8px] font-bold text-blue-600">Médio: {s.workloadMedio}</span>}
-                            {s.isTechnical && <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 px-1 rounded border border-indigo-100 uppercase">Técnico</span>}
+                            {s.isTechnical && <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 px-1 rounded border border-indigo-100 uppercase">{techCourseName}</span>}
                           </div>
                         </div>
                       ))}
@@ -9523,10 +9527,11 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 </div>
               </div>
 
-              {/* Grid content */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left">
-                {/* COLUMN 1: CADASTRO & CARGA */}
-                <div className="space-y-4">
+              {/* Form side */}
+              <div className={isDisciplinasRoute ? "w-[400px] shrink-0 h-full overflow-y-auto pr-2 custom-scrollbar flex flex-col pt-1" : "flex flex-col"}>
+                <div className={isDisciplinasRoute ? "space-y-5 text-left" : "grid grid-cols-1 md:grid-cols-2 gap-5 text-left"}>
+                  {/* COLUMN 1: CADASTRO & CARGA */}
+                  <div className="space-y-4">
                   <div className="flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
                     <span className="text-[10px] font-black text-[#657c36] uppercase tracking-wider">
                       1. Cadastro & Carga Horária
@@ -9605,7 +9610,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       <div>
                         <span className="text-xs font-bold text-indigo-900 block mb-0.5">Disciplina Técnica / Profissionalizante</span>
                         <span className="text-[9px] text-indigo-700/80 leading-tight block font-semibold">
-                          Marque para garantir que essa matéria só seja lecionada em turmas marcadas como "Técnico". Ex: Marketing, Finanças e etc.
+                          Marque para garantir que essa matéria só seja lecionada em turmas marcadas como "Técnico". Ex: {techCourseName}, Finanças, etc.
                         </span>
                       </div>
                     </label>
@@ -9658,7 +9663,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       <option value="ambos">Ambos os Níveis (Ensino Médio e Fundamental)</option>
                       <option value="fundamental">Apenas Ensino Fundamental II (6º ao 9º Ano)</option>
                       <option value="medio">Apenas Ensino Médio (1º ao 3º Ano)</option>
-                      <option value="tecnico">Ensino Médio Integrado ao Técnico</option>
+                      <option value="tecnico">Ensino Médio Integrado ao Técnico ({techCourseName})</option>
                     </select>
                   </div>
 
@@ -9850,10 +9855,13 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   {editingSubjectId ? 'Salvar Alterações' : 'Cadastrar Disciplina'}
                 </button>
               </div>
+            </div>
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
 
+      <AnimatePresence>
         {isShowingMissingClasses && (
           <div className="fixed inset-0 z-[85] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
             <motion.div 
@@ -9887,12 +9895,16 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
               </div>
 
               {/* Status Banner / Metrics Dashboard */}
-              <div className="px-6 py-4 bg-white border-b border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="px-6 py-4 bg-white border-b border-slate-100 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 {(() => {
                   let overallExpected = 0;
                   let overallAllocated = 0;
                   let overallMissing = 0;
                   let overallExtra = 0;
+                  let turmasComplete = 0;
+                  let allocatedTeachers = new Set<string>();
+                  let activeSubjects = new Set<string>();
+                  
                   let metricTurmas = turmas.filter(t => !t.isRoom);
 
                   if (!enableNoite) {
@@ -9934,58 +9946,102 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   }
 
                   metricTurmas.forEach(t => {
-                    subjects.forEach(s => {
-                      // If searching, restrict counted workloads to matching elements
-                      if (missingClassesSearch.trim()) {
+                    let isTurmaComplete = true;
+                    if (missingClassesSearch.trim()) {
+                      subjects.forEach(s => {
                         const sNameLower = s.name.toLowerCase();
                         const tNameLower = t.name.toLowerCase();
                         const searchLower = missingClassesSearch.toLowerCase();
                         if (!sNameLower.includes(searchLower) && !tNameLower.includes(searchLower)) {
                           return;
                         }
+                        const { total, usage } = getClassSubjectWorkload(t.id, s.id);
+                        if (total > 0) activeSubjects.add(s.id);
+                        overallExpected += total;
+                        overallAllocated += Math.min(total, usage);
+                        if (total > usage) {
+                          overallMissing += (total - usage);
+                          isTurmaComplete = false;
+                        } else if (usage > total) {
+                          overallExtra += (usage - total);
+                          isTurmaComplete = false;
+                        }
+                      });
+                    } else {
+                      const cExpected = (t.dailyClassCount || 5) * 5;
+                      let cAllocated = 0;
+                      if (schedules[t.id]) {
+                         Object.values(schedules[t.id]).forEach((slot: any) => {
+                             if (slot && slot.teacherId && slot.subjectId) {
+                                 cAllocated++;
+                                 allocatedTeachers.add(slot.teacherId);
+                                 activeSubjects.add(slot.subjectId);
+                             }
+                         });
                       }
-                      const { total, usage } = getClassSubjectWorkload(t.id, s.id);
-                      overallExpected += total;
-                      overallAllocated += Math.min(total, usage);
-                      if (total > usage) {
-                        overallMissing += (total - usage);
-                      } else if (usage > total) {
-                        overallExtra += (usage - total);
+                      overallExpected += cExpected;
+                      overallAllocated += Math.min(cExpected, cAllocated);
+                      if (cExpected > cAllocated) {
+                        overallMissing += (cExpected - cAllocated);
+                        isTurmaComplete = false;
+                      } else if (cAllocated > cExpected) {
+                        overallExtra += (cAllocated - cExpected);
+                        isTurmaComplete = false;
                       }
-                    });
+                    }
+                    if (isTurmaComplete) turmasComplete++;
                   });
 
                   const overallCompletion = overallExpected > 0 ? Math.round((overallAllocated / overallExpected) * 100) : 0;
 
                   return (
                     <>
-                      <div className="bg-slate-50 p-3.5 rounded-2xl flex flex-col">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Aulas Esperadas</span>
-                        <span className="text-2xl font-black text-slate-800 leading-tight mt-1">{overallExpected}</span>
+                      <div className="bg-slate-50 p-2.5 rounded-2xl flex flex-col justify-center border border-slate-100">
+                        <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-wider">Aulas Esperadas</span>
+                        <span className="text-xl font-black text-slate-800 leading-tight mt-0.5">{overallExpected}</span>
                       </div>
-                      <div className="bg-slate-50 p-3.5 rounded-2xl flex flex-col">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Aulas Distribuídas</span>
-                        <span className="text-xl font-black text-green-600 leading-tight mt-1 flex items-center gap-1.5">
+                      <div className="bg-emerald-50/50 p-2.5 rounded-2xl flex flex-col justify-center border border-emerald-100/50">
+                        <span className="text-[8.5px] font-black text-emerald-600/70 uppercase tracking-wider">Aulas Distribuídas</span>
+                        <span className="text-xl font-black text-emerald-600 leading-tight mt-0.5 flex items-center gap-1.5">
                            {overallAllocated}
-                          <span className="text-xs font-bold text-slate-400 font-mono">({overallCompletion}%)</span>
+                          <span className="text-[10px] font-bold text-emerald-500/70 font-mono">({overallCompletion}%)</span>
                         </span>
                       </div>
-                      <div className="bg-slate-50 p-3.5 rounded-2xl flex flex-col">
+                      <div className="bg-rose-50/50 p-2.5 rounded-2xl flex flex-col justify-center border border-rose-100/50">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Aulas Faltantes</span>
-                          {overallMissing === 0 && <span className="bg-green-100 text-green-700 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest leading-none">OK</span>}
+                          <span className="text-[8.5px] font-black text-rose-600/70 uppercase tracking-wider">Aulas Faltantes</span>
+                          {overallMissing === 0 && <span className="bg-green-100 text-green-700 text-[7px] font-black px-1 py-0.5 rounded-sm uppercase tracking-widest leading-none">OK</span>}
                         </div>
-                        <span className="text-2xl font-black text-rose-600 leading-tight mt-1">
+                        <span className="text-xl font-black text-rose-600 leading-tight mt-0.5">
                           {overallMissing}
                         </span>
                       </div>
-                      <div className="bg-slate-50 p-3.5 rounded-2xl flex flex-col justify-center">
-                        <div className="flex items-center gap-1.5 mt-[-10px]">
-                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Excesso (A Mais)</span>
-                          {overallExtra > 0 && <span className="bg-amber-100 text-amber-700 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest leading-none">ALERTA</span>}
+                      <div className="bg-amber-50/50 p-2.5 rounded-2xl flex flex-col justify-center border border-amber-100/50">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[8.5px] font-black text-amber-600/70 uppercase tracking-wider">Excesso (A Mais)</span>
+                          {overallExtra > 0 && <span className="bg-amber-200 text-amber-800 text-[7px] font-black px-1 py-0.5 rounded-sm uppercase tracking-widest leading-none">ALERTA</span>}
                         </div>
-                        <span className={`text-2xl font-black leading-tight mt-1 ${overallExtra > 0 ? 'text-amber-600' : 'text-slate-300'}`}>
+                        <span className={`text-xl font-black leading-tight mt-0.5 ${overallExtra > 0 ? 'text-amber-600' : 'text-amber-600/50'}`}>
                           {overallExtra}
+                        </span>
+                      </div>
+                      
+                      <div className="bg-blue-50/50 p-2.5 rounded-2xl flex flex-col justify-center border border-blue-100/50">
+                        <span className="text-[8.5px] font-black text-blue-600/70 uppercase tracking-wider">Grades Fechadas</span>
+                        <span className="text-xl font-black text-blue-600 leading-tight mt-0.5 flex items-center gap-1.5">
+                          {turmasComplete} <span className="text-[10px] font-bold text-blue-500/70 font-mono">/ {metricTurmas.length}</span>
+                        </span>
+                      </div>
+                      <div className="bg-purple-50/50 p-2.5 rounded-2xl flex flex-col justify-center border border-purple-100/50">
+                        <span className="text-[8.5px] font-black text-purple-600/70 uppercase tracking-wider">Prof. Alocados</span>
+                        <span className="text-xl font-black text-purple-600 leading-tight mt-0.5 flex items-center gap-1.5">
+                          {allocatedTeachers.size} <span className="text-[10px] font-bold text-purple-500/70 font-mono">/ {teachers.length}</span>
+                        </span>
+                      </div>
+                      <div className="bg-indigo-50/50 p-2.5 rounded-2xl flex flex-col justify-center border border-indigo-100/50">
+                        <span className="text-[8.5px] font-black text-indigo-600/70 uppercase tracking-wider">Disciplinas Usadas</span>
+                        <span className="text-xl font-black text-indigo-600 leading-tight mt-0.5 flex items-center gap-1.5">
+                          {activeSubjects.size} <span className="text-[10px] font-bold text-indigo-500/70 font-mono">/ {subjects.length}</span>
                         </span>
                       </div>
                     </>
@@ -10149,15 +10205,25 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     let classMissing = 0;
                     let classExtra = 0;
                     
+                    const isSearching = missingClassesSearch.trim() !== '';
+
                     const classSubjects = subjects.map(s => {
                       const { usage, total, classroomUsage, labUsage } = getClassSubjectWorkload(turma.id, s.id);
                       const missingCount = Math.max(0, total - usage);
                       const extraCount = Math.max(0, usage - total);
                       
-                      classExpected += total;
-                      classAllocated += Math.min(total, usage);
-                      classMissing += missingCount;
-                      classExtra += extraCount;
+                      // In search mode, we sum individual matched subjects to form the total
+                      if (isSearching) {
+                         const sNameLower = s.name.toLowerCase();
+                         const tNameLower = turma.name.toLowerCase();
+                         const searchLower = missingClassesSearch.toLowerCase();
+                         if (sNameLower.includes(searchLower) || tNameLower.includes(searchLower)) {
+                           classExpected += total;
+                           classAllocated += Math.min(total, usage);
+                           classMissing += missingCount;
+                           classExtra += extraCount;
+                         }
+                      }
 
                       return {
                         subject: s,
@@ -10169,6 +10235,19 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         extraCount
                       };
                     }).filter(item => item.total > 0 || item.usage > 0);
+
+                    // If NO search applied, we calculate missing/expected via grid slots
+                    if (!isSearching) {
+                       classExpected = (turma.dailyClassCount || 5) * 5;
+                       classAllocated = 0;
+                       if (schedules[turma.id]) {
+                          Object.values(schedules[turma.id]).forEach((slot: any) => {
+                             if (slot && slot.teacherId && slot.subjectId) { classAllocated++; }
+                          });
+                       }
+                       classMissing = Math.max(0, classExpected - classAllocated);
+                       classExtra = Math.max(0, classAllocated - classExpected);
+                    }
 
                     // Sort subjects of class: place pending ones pointing on top!
                     const sortedClassSubjects = [...classSubjects]
@@ -10603,6 +10682,26 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   O algoritmo inteligente organizará todas as aulas cadastradas de forma equilibrada, <span className="font-bold text-slate-700">respeitando a disponibilidade dos professores, cargas horárias e salas especiais</span>, garantindo zero duplicidades e choques de horário.
                 </div>
 
+                <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-200">
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className="relative flex items-center justify-center shrink-0 mt-0.5">
+                      <input 
+                        type="checkbox" 
+                        checked={autoGenForceConflicts}
+                        onChange={(e) => setAutoGenForceConflicts(e.target.checked)}
+                        className="peer appearance-none w-4 h-4 border-2 border-slate-300 rounded focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 checked:bg-amber-600 checked:border-amber-600 transition-all cursor-pointer"
+                      />
+                      <Check className="w-2.5 h-2.5 text-white absolute opacity-0 scale-50 peer-checked:opacity-100 peer-checked:scale-100 transition-all pointer-events-none" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-amber-900 block mb-0.5">Salvar grade mesmo com conflitos</span>
+                      <span className="text-[9px] text-amber-700/80 leading-tight block font-semibold text-justify">
+                        Se o sistema não conseguir encaixar as aulas (devido a restrições de tempo), ele <b>forçará</b> as aulas nos espaços vazios e exibirá essas aulas conflitantes em <b>vermelho</b>, para correção manual posterior.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
                 {/* Opções de Modo */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1">Modo de Geração</label>
@@ -10891,14 +10990,28 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">
                       <span>Lista de Aulas Pendentes ({autoGenResults.pending.length})</span>
-                      <button
-                        type="button"
-                        onClick={handlePrintPendingReport}
-                        className="flex items-center gap-1.5 text-[9px] text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg cursor-pointer transition-colors border border-indigo-150 font-bold"
-                      >
-                        <Printer className="w-3.5 h-3.5" />
-                        Imprimir Lista
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm('Atenção: Isso forçará a entrada das disciplinas na grade mesmo se o professor já estiver em outra turma, gerando choques de horário (linhas vermelhas). Deseja continuar?')) {
+                              handleForceAllocatePending();
+                            }
+                          }}
+                          className="flex items-center gap-1.5 text-[9px] text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-lg cursor-pointer transition-colors border border-amber-200 font-bold"
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          Forçar Alocação
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handlePrintPendingReport}
+                          className="flex items-center gap-1.5 text-[9px] text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg cursor-pointer transition-colors border border-indigo-150 font-bold"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          Imprimir Lista
+                        </button>
+                      </div>
                     </div>
                     <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
                       <div className="max-h-60 overflow-y-auto">
@@ -11186,7 +11299,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                             <p className="text-[11px] text-slate-500 pl-3 leading-relaxed">
                               Ideal para itinerários formativos, trilhas de aprofundamento técnico ou disciplinas eletivas específicas. Digite siglas separadas por vírgula (como <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-mono text-[9px] font-bold">B, Integral</code>).
                               <br />
-                              <span className="text-amber-600 font-medium font-sans italic text-[10px]">* Exemplo Prático:</span> Matérias profissionalizantes como <strong>Marketing</strong> podem ser configuradas para só entrarem em turmas que possuam a sigla "B" no seu identificador. Se uma turma não tiver o sufixo cadastrado em seu nome (ex: "1º Ano A"), ela não receberá essa aula.
+                              <span className="text-amber-600 font-medium font-sans italic text-[10px]">* Exemplo Prático:</span> Matérias profissionalizantes como <strong>{techCourseName}</strong> podem ser configuradas para só entrarem em turmas que possuam a marcação "Técnico". Se uma turma não for marcada, ela não receberá essa aula.
                             </p>
                           </div>
 
@@ -11773,7 +11886,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                               setNewTurmaName(turma.name);
                               setNewTurmaShift(tShift === 'todas' ? 'todas' : tShift);
                               setNewTurmaDailyClassCount(turma.dailyClassCount || 6);
-                              setIsAddingTurma(true);
+                              openSidebarModal('turma');
                             }}
                             className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
                           >
@@ -11934,7 +12047,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                       <div className="flex gap-1">
                                         <button 
                                           onClick={() => {
-                                            setIsAddingRoom(true);
+                                            openSidebarModal('sala');
                                           }}
                                           className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
                                         >
@@ -12021,7 +12134,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                             <button 
                               onClick={() => {
                                 startEditSubject(subject);
-                                setIsAddingSubject(true);
+                                openSidebarModal('disciplina');
                               }}
                               className="p-1 hover:bg-slate-100 rounded-md text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
                               title="Editar"
@@ -12127,7 +12240,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                           <div className="flex justify-between items-center border-b border-emerald-100/60 pb-1.5">
                             <span className="text-[10px] font-black text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
                               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                              Médio Técnico
+                              {techCourseName}
                             </span>
                             <button 
                               onClick={() => openAddSubjectWithPreset('tecnico')}
@@ -12224,7 +12337,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                 <button 
                                   onClick={() => {
                                     startEditTeacher(teacher);
-                                    setIsAddingTeacher(true);
+                                    openSidebarModal('professor');
                                   }}
                                   className="p-1 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
                                 >
@@ -12716,6 +12829,31 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* Visual Autosave Indicator */}
+      <AnimatePresence>
+        {(isAutosaving || isSaved) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-4 right-4 bg-white border border-slate-200 shadow-lg rounded-full flex items-center gap-2 px-4 py-2 pointer-events-none z-50 overflow-hidden"
+          >
+            {isAutosaving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                <span className="text-xs font-bold text-slate-600">Salvando as alterações...</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <span className="text-xs font-bold text-slate-800">Visualização Atualizada & Gravada</span>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
     </>
   );

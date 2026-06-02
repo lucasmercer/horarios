@@ -25,7 +25,8 @@ import {
   CalendarClock,
   Trash2,
   AlertCircle,
-  Check
+  Check,
+  Database
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -46,6 +47,7 @@ export default function DashboardLayout() {
   const [configEnableAsincrona, setConfigEnableAsincrona] = useState(false);
   const [configIsCivicoMilitar, setConfigIsCivicoMilitar] = useState(false);
   const [configApiKey, setConfigApiKey] = useState('');
+  const [configTechCourseName, setConfigTechCourseName] = useState('Marketing');
 
   const handleOpenSettings = () => {
     setConfigSchoolName(localStorage.getItem('cecm_school_name') || 'CE LUCAS LENIAR EF.M.P.');
@@ -53,6 +55,7 @@ export default function DashboardLayout() {
     setConfigEnableNoite(localStorage.getItem('enable_noite_period') === 'true');
     setConfigEnableAsincrona(localStorage.getItem('enable_noite_asynchronous') === 'true');
     setConfigIsCivicoMilitar(localStorage.getItem('cecm_is_civico_militar') === 'true');
+    setConfigTechCourseName(localStorage.getItem('cecm_tech_course_name') || 'Marketing');
     setConfigApiKey(localStorage.getItem('GEMINI_API_KEY') || '');
 
     const trimesterConfigStr = localStorage.getItem('cecm_trimester_config');
@@ -82,6 +85,7 @@ export default function DashboardLayout() {
     localStorage.setItem('enable_noite_period', configEnableNoite ? 'true' : 'false');
     localStorage.setItem('enable_noite_asynchronous', configEnableAsincrona ? 'true' : 'false');
     localStorage.setItem('cecm_is_civico_militar', configIsCivicoMilitar ? 'true' : 'false');
+    localStorage.setItem('cecm_tech_course_name', configTechCourseName);
     if (configApiKey.trim()) {
       localStorage.setItem('GEMINI_API_KEY', configApiKey.trim());
     } else {
@@ -346,6 +350,7 @@ export default function DashboardLayout() {
     { name: 'Horários', path: '/horarios', icon: CalendarDays, locked: !hasTurmas || !hasDisciplinas || !hasProfessores },
     { name: 'Substituições', path: '/substituicoes', icon: CalendarClock, locked: !hasTurmas || !hasDisciplinas || !hasProfessores },
     { name: 'Atas de Reunião', path: '/atas', icon: FileText, locked: false },
+    { name: 'Banco de Dados', path: '/dados', icon: Database, locked: false }
   ];
 
   const handleSupportSend = () => {
@@ -424,30 +429,6 @@ export default function DashboardLayout() {
                   <item.icon className="w-4 h-4" />
                   <span className="truncate w-full block">{item.name}</span>
                 </NavLink>
-              )}
-              {index === 0 && (
-                <button 
-                  onClick={() => {
-                    setIsImportOpen(true);
-                    setIsSidebarOpen(false);
-                  }}
-                  className="w-full flex flex-col items-center justify-center gap-1 py-1 rounded-md text-[7px] font-black tracking-widest uppercase transition-all text-emerald-600 hover:bg-emerald-50 mb-0.5 border border-transparent hover:border-emerald-100"
-                >
-                  <Save className="w-3 h-3 shrink-0" />
-                  <span className="truncate w-full block">Restaurar</span>
-                </button>
-              )}
-              {index === navItems.length - 1 && (
-                <button 
-                  onClick={() => {
-                    setIsExportOpen(true);
-                    setIsSidebarOpen(false);
-                  }}
-                  className="w-full flex flex-col items-center justify-center gap-1 py-1 rounded-md text-[7px] font-black tracking-widest uppercase transition-all text-red-600 hover:bg-red-50 mt-0.5 border border-transparent hover:border-red-100"
-                >
-                  <Download className="w-3 h-3 shrink-0" />
-                  <span className="truncate w-full block">Backup</span>
-                </button>
               )}
             </div>
           ))}
@@ -712,6 +693,26 @@ export default function DashboardLayout() {
                         </span>
                       </div>
                     </button>
+                  </div>
+                </div>
+
+                {/* Nome do Curso Técnico */}
+                <div className="space-y-3 pt-2">
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    Nome do Curso Técnico / Profissionalizante
+                  </h4>
+                  <div className="flex flex-col gap-1.5">
+                    <input 
+                      type="text" 
+                      value={configTechCourseName}
+                      onChange={(e) => setConfigTechCourseName(e.target.value)}
+                      placeholder="Ex: Marketing, Administração, Agronegócio..."
+                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 placeholder:font-medium placeholder:text-slate-400 bg-slate-50 transition-all font-sans"
+                    />
+                    <p className="text-[9px] text-slate-500 ml-1">
+                      Configure qual o nome do curso técnico integrado ofertado pelas turmas do ensino médio. Isso vai aparecer na hora de criar turmas e disciplinas.
+                    </p>
                   </div>
                 </div>
 

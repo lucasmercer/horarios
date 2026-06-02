@@ -32,7 +32,11 @@ export default function DashboardCentral() {
     missing: 0,
     excess: 0,
     percentage: 0,
-    conflicts: 0
+    conflicts: 0,
+    teachersWithExcess: 0,
+    activeTeachers: 0,
+    averageTeacherLoad: 0,
+    roomsCount: 0
   });
 
   const [shiftStats, setShiftStats] = useState({
@@ -181,7 +185,16 @@ export default function DashboardCentral() {
       }
 
       const parsedTeachers = savedTeachers ? JSON.parse(savedTeachers) : [];
-      const parsedTurmas = savedTurmas ? JSON.parse(savedTurmas).filter((t: any) => !t.isRoom) : [];
+      const rawParsedTurmas = savedTurmas ? JSON.parse(savedTurmas).filter((t: any) => !t.isRoom) : [];
+      const enableNoite = localStorage.getItem('cecm_enable_noite') === 'true';
+
+      const parsedTurmas = rawParsedTurmas.filter((t: any) => {
+        if (enableNoite) return true;
+        const tName = (t.name || '').toLowerCase();
+        const tShift = t.shift || (tName.includes('tarde') ? 'tarde' : tName.includes('noite') ? 'noite' : 'manha');
+        return tShift !== 'noite';
+      });
+
       const parsedSubjects = savedSubjects ? JSON.parse(savedSubjects) : [];
       const parsedSchedules = savedSchedules ? JSON.parse(savedSchedules) : {};
 
@@ -262,6 +275,8 @@ export default function DashboardCentral() {
                const tName = (turmaObj.name || '').toLowerCase();
                const tShift = turmaObj.shift || (tName.includes('tarde') ? 'tarde' : tName.includes('noite') ? 'noite' : 'manha');
 
+               if (!enableNoite && tShift === 'noite') return; // Skip counting night classes if disabled
+
                distributed++;
                if (tShift === 'manha') distManha++;
                else if (tShift === 'tarde') distTarde++;
@@ -282,12 +297,24 @@ export default function DashboardCentral() {
       });
 
       let incompleteCount = 0;
+      let teachersWithExcessCount = 0;
+      let activeTeachersCount = 0;
+      let totalTeacherLoad = 0;
+
       parsedTeachers.forEach((t: any) => {
         const load = teacherLoads[t.id] || 0;
+        if (load > 0) {
+          activeTeachersCount++;
+          totalTeacherLoad += load;
+        }
         const expectedLoad = t.schoolWorkload;
         // Count teachers who have a required workload but haven't reached it yet
         if (expectedLoad && load < expectedLoad) {
           incompleteCount++;
+        }
+        // Count teachers who exceeded their maximum workload (if 0 or undefined, they don't have limit)
+        if (expectedLoad && expectedLoad > 0 && load > expectedLoad) {
+          teachersWithExcessCount++;
         }
       });
       setIncompleteTeachersCount(incompleteCount);
@@ -312,7 +339,11 @@ export default function DashboardCentral() {
         missing,
         excess,
         percentage,
-        conflicts: conflictsCount
+        conflicts: conflictsCount,
+        teachersWithExcess: teachersWithExcessCount,
+        activeTeachers: activeTeachersCount,
+        averageTeacherLoad: activeTeachersCount > 0 ? Math.round((totalTeacherLoad / activeTeachersCount) * 10) / 10 : 0,
+        roomsCount: rawParsedTurmas.filter((t: any) => t.isRoom).length
       });
 
       setShiftStats({
@@ -426,7 +457,7 @@ export default function DashboardCentral() {
              </button>
 
              <button 
-               onClick={() => window.dispatchEvent(new Event('cecm_open_import'))}
+               onClick={() => navigate('/dados')}
                className="flex flex-col items-center justify-center gap-3 p-8 bg-emerald-600 border border-emerald-700 rounded-2xl text-white hover:bg-emerald-700 transition-all cursor-pointer shadow-lg hover:shadow-xl hover:-translate-y-1 group"
              >
                <Save className="w-10 h-10 text-emerald-200 group-hover:scale-110 transition-transform" />
@@ -575,6 +606,109 @@ export default function DashboardCentral() {
             )}
           </div>
         </div>
+        
+        {/* New Metrics Row */}
+        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
+          <div className="relative flex justify-between items-start">
+            <div className="space-y-2">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">Aulas Planejadas</span>
+              <p className="text-3xl font-black text-slate-800">{classStats.expected}</p>
+            </div>
+          </div>
+          <div className="mt-5 flex items-center gap-1.5 text-xs font-bold text-slate-500">
+            <span>Soma da matriz de todas as turmas</span>
+          </div>
+        </div>
+
+        <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100 shadow-sm relative overflow-hidden group">
+          <div className="relative flex justify-between items-start">
+            <div className="space-y-2">
+              <span className="text-[10px] font-black text-emerald-600/70 uppercase tracking-widest flex items-center gap-1">Aulas Distribuídas</span>
+              <p className="text-3xl font-black text-emerald-600">{classStats.distributed}</p>
+            </div>
+          </div>
+          <div className="mt-5 flex items-center gap-1.5 text-xs font-bold text-emerald-600/70">
+            <span>Aulas já alocadas na grade</span>
+          </div>
+        </div>
+
+        <div className={`p-6 rounded-2xl border shadow-sm relative overflow-hidden group transition-colors ${classStats.missing > 0 ? 'bg-rose-50/80 border-rose-200' : 'bg-slate-50 border-slate-200'}`}>
+          <div className="relative flex justify-between items-start">
+            <div className="space-y-2">
+              <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ${classStats.missing > 0 ? 'text-rose-600/80' : 'text-slate-400'}`}>Aulas Faltantes</span>
+              <p className={`text-3xl font-black ${classStats.missing > 0 ? 'text-rose-600' : 'text-slate-800'}`}>{classStats.missing}</p>
+            </div>
+          </div>
+          <div className={`mt-5 flex items-center gap-1.5 text-xs font-bold ${classStats.missing > 0 ? 'text-rose-600/80' : 'text-slate-500'}`}>
+            <span>{classStats.missing === 0 ? 'Todas as turmas completas' : 'Aulas pendentes de alocação'}</span>
+          </div>
+        </div>
+
+        <div className={`p-6 rounded-2xl border shadow-sm relative overflow-hidden group transition-colors ${classStats.conflicts > 0 || classStats.excess > 0 ? 'bg-amber-50/80 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
+          <div className="relative flex justify-between items-start">
+            <div className="space-y-2">
+              <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ${classStats.conflicts > 0 || classStats.excess > 0 ? 'text-amber-600/80' : 'text-slate-400'}`}>Problemas & Alertas</span>
+              <div className="flex items-end gap-2">
+                 <p className={`text-3xl font-black ${classStats.conflicts > 0 || classStats.excess > 0 ? 'text-amber-600' : 'text-slate-800'}`}>{classStats.conflicts + classStats.excess}</p>
+              </div>
+            </div>
+          </div>
+          <div className={`mt-5 flex flex-col gap-0.5 text-xs font-bold ${classStats.conflicts > 0 || classStats.excess > 0 ? 'text-amber-600/80' : 'text-slate-500'}`}>
+             {classStats.conflicts > 0 && <span>{classStats.conflicts} conflitos de horário</span>}
+             {classStats.excess > 0 && <span>{classStats.excess} aulas a mais que a matriz</span>}
+             {classStats.conflicts === 0 && classStats.excess === 0 && <span>Grade perfeitamente validada</span>}
+          </div>
+        </div>
+
+        {/* Third Metrics Row */}
+        <div className="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100 shadow-sm relative overflow-hidden group flex flex-col justify-between">
+          <div className="relative flex justify-between items-start">
+            <div className="space-y-2">
+              <span className="text-[10px] font-black text-indigo-600/70 uppercase tracking-widest flex items-center gap-1">Evolução Escolar</span>
+              <p className="text-3xl font-black text-indigo-600">{classStats.percentage}%</p>
+            </div>
+          </div>
+          <div className="mt-5 w-full bg-indigo-100 rounded-full h-1.5 overflow-hidden">
+            <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${classStats.percentage}%` }} />
+          </div>
+        </div>
+
+        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
+          <div className="relative flex justify-between items-start">
+            <div className="space-y-2">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">Ambientes Especiais</span>
+              <p className="text-3xl font-black text-slate-800">{classStats.roomsCount}</p>
+            </div>
+          </div>
+          <div className="mt-5 flex items-center gap-1.5 text-xs font-bold text-slate-500">
+            <span>Salas de Laboratório, Quadras, etc</span>
+          </div>
+        </div>
+
+        <div className="bg-purple-50/50 p-6 rounded-2xl border border-purple-100 shadow-sm relative overflow-hidden group">
+          <div className="relative flex justify-between items-start">
+            <div className="space-y-2">
+              <span className="text-[10px] font-black text-purple-600/70 uppercase tracking-widest flex items-center gap-1">Professores Em Uso</span>
+              <p className="text-3xl font-black text-purple-600">{classStats.activeTeachers} <span className="text-sm text-purple-400">/ {stats.teachers}</span></p>
+            </div>
+          </div>
+          <div className="mt-5 flex flex-col gap-0.5 text-xs font-bold text-purple-600/70">
+            <span>Docentes vinculados a horários</span>
+          </div>
+        </div>
+
+        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
+          <div className="relative flex justify-between items-start">
+            <div className="space-y-2">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">Média de Carga Docente</span>
+              <p className="text-3xl font-black text-slate-800">{classStats.averageTeacherLoad}</p>
+            </div>
+          </div>
+          <div className="mt-5 flex items-center gap-1.5 text-xs font-bold text-slate-500">
+            <span>Aulas por professor ativo</span>
+          </div>
+        </div>
+
       </div>
 
       {/* Main content grid */}
