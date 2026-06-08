@@ -3890,30 +3890,31 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
   };
 
   const performMoveOrSwap = (sourceTurmaId: string, sourceSlotId: string, targetTurmaId: string, targetSlotId: string) => {
-      if (sourceTurmaId === targetTurmaId && sourceSlotId === targetSlotId) {
-        return;
-      }
+    if (sourceTurmaId === targetTurmaId && sourceSlotId === targetSlotId) {
+      return;
+    }
 
-      const check = validateDragAndDrop(sourceTurmaId, sourceSlotId, targetTurmaId, targetSlotId);
-      if (!check.isValid) {
-        // Flash target cell in Red
-        setErrorCell({ turmaId: targetTurmaId, slotId: targetSlotId });
-        setDragErrorMsg(check.error || "Operação inválida.");
-        // Clear after definitions
-        setTimeout(() => {
-          setErrorCell(null);
-        }, 1500);
-        setTimeout(() => {
-          setDragErrorMsg(null);
-        }, 6000);
-        return;
-      }
+    const check = validateDragAndDrop(sourceTurmaId, sourceSlotId, targetTurmaId, targetSlotId);
+    if (!check.isValid) {
+      // Flash target cell in Red
+      setErrorCell({ turmaId: targetTurmaId, slotId: targetSlotId });
+      setDragErrorMsg(check.error || "Operação inválida.");
+      // Clear after definitions
+      setTimeout(() => {
+        setErrorCell(null);
+      }, 1500);
+      setTimeout(() => {
+        setDragErrorMsg(null);
+      }, 6000);
+      return;
+    }
 
-      // Proceed with drop / change schedules
-      const updatedSchedules = { ...schedules };
-      const sourceSlotData = updatedSchedules[sourceTurmaId]?.[sourceSlotId];
-      if (!sourceSlotData) return;
-      const targetSlotData = updatedSchedules[targetTurmaId]?.[targetSlotId];
+    // Proceed with drop / change schedules
+    const updatedSchedules = { ...schedules };
+    const sourceSlotData = updatedSchedules[sourceTurmaId]?.[sourceSlotId];
+    if (!sourceSlotData) return;
+    const targetSlotData = updatedSchedules[targetTurmaId]?.[targetSlotId];
+
 
       if (!updatedSchedules[targetTurmaId]) {
         updatedSchedules[targetTurmaId] = {};
@@ -4053,6 +4054,40 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     } catch (err) {
       console.error("Error on drop:", err);
     }
+  };
+
+  const getSuggestionsForSlot = (turmaId: string, slotId: string) => {
+    const sourceSlotData = schedules[turmaId]?.[slotId];
+    if (!sourceSlotData) return [];
+    
+    const teacherId = sourceSlotData.teacherId;
+    if (!teacherId || teacherId === 'none') return []; // no conflict if no teacher
+    
+    const tShift = getTurmaShift(turmas.find(t => t.id === turmaId) || {} as Turma);
+    const validPeriods = tShift === 'manha' ? [1,2,3,4,5,6] : tShift === 'tarde' ? [7,8,9,10,11,12] : tShift === 'noite' ? [13,14,15,16,17] : [];
+    
+    const suggestions: { slotId: string, desc: string, isSwap: boolean }[] = [];
+    
+    DAYS.forEach(day => {
+      validPeriods.forEach(p => {
+        const targetSlotId = `${day.id}-${p}`;
+        if (targetSlotId === slotId) return; // skip self
+        
+        const check = validateDragAndDrop(turmaId, slotId, turmaId, targetSlotId);
+        if (check.isValid) {
+          const targetData = schedules[turmaId]?.[targetSlotId];
+          const isTargetEmpty = !targetData || !targetData.teacherId || targetData.teacherId === 'none';
+          const displayDay = day.label;
+          const displayPeriod = getDisplayPeriod(p);
+          let desc = isTargetEmpty 
+            ? `Mover para ${displayDay} (${displayPeriod}ª)` 
+            : `Trocar com ${displayDay} (${displayPeriod}ª - ${subjects.find(s=>s.id===targetData.subjectId)?.name || 'Outra'})`;
+          suggestions.push({ slotId: targetSlotId, desc, isSwap: !isTargetEmpty });
+        }
+      });
+    });
+    
+    return suggestions;
   };
 
   const handleSlotClick = (dayId: string, periodId: number, turmaId: string) => {
@@ -7649,6 +7684,48 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 </div>
               </div>
 
+              {(() => {
+                if (!selectedTurmaId || !selectedSlot || viewMode === 'rooms') return null;
+                const d = selectedSlot.split('-')[0];
+                const p = parseInt(selectedSlot.split('-')[1]);
+                
+                const c = getConflicts(d, p, tempTeacher, selectedTurmaId, undefined);
+                
+                if (c.length > 0) {
+                  const suggestions = getSuggestionsForSlot(selectedTurmaId, selectedSlot);
+                  if (suggestions.length > 0) {
+                    return (
+                      <div className="mb-4 animate-in fade-in slide-in-from-top-2">
+                        <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5 mb-2">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Sugestões para corrigir conflito
+                        </label>
+                        <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                          {suggestions.map((s, i) => (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                performMoveOrSwap(selectedTurmaId, selectedSlot, selectedTurmaId, s.slotId);
+                                setSelectedSlot(null);
+                                setTempTeacher('');
+                                setTempSubject('');
+                                setTempAssociatedTurmaId('');
+                                setTempAssociatedRoomId('');
+                              }}
+                              className="w-full text-left px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 hover:border-emerald-300 rounded-xl transition-all shadow-xs flex items-center justify-between group cursor-pointer"
+                            >
+                              <span className="text-[11px] font-bold text-emerald-800 tracking-tight leading-none">{s.desc}</span>
+                              <span className="bg-white px-2 py-0.5 rounded-md text-[8px] font-black text-emerald-600 uppercase border border-emerald-100 group-hover:bg-emerald-50 transition-colors">USAR</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                }
+                return null;
+              })()}
+
               {slotError && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 animate-in fade-in zoom-in-95">
                   <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
@@ -9518,21 +9595,40 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                       ))}
                     </div>
 
-                    <div className={`overflow-y-auto pr-2 custom-scrollbar ${isProfessoresRoute ? 'flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 content-start' : 'max-h-60 space-y-2'}`}>
-                      {teachers
-                        .filter(t => !teacherLetterFilter || t.name.toUpperCase().startsWith(teacherLetterFilter))
-                        .map(teacher => {
-                        const teacherSubjects = subjects.filter(s => teacher.subjectIds?.includes(s.id));
-                        return (
-                          <div key={teacher.id} className="relative flex flex-col p-3 bg-slate-50 rounded-xl hover:bg-white border border-transparent hover:border-slate-200 transition-all group">
-                            <div className="flex flex-col min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2 pr-14">
-                                <span className="text-xs font-black text-slate-800 break-words">{teacher.name}</span>
-                                {teacher.schoolWorkload !== undefined && (
-                                  <span className="text-[7px] font-black bg-purple-100 text-purple-700 px-1 py-0.5 rounded uppercase tracking-tighter shadow-sm" title={`Carga máxima fixada em ${teacher.schoolWorkload} aulas gerais neste colégio`}>
-                                    Geral: {teacher.schoolWorkload}h
-                                  </span>
-                                )}
+                    {(() => {
+                      const teacherLoads: Record<string, number> = {};
+                      for (const turmaId in schedules) {
+                        const turmaSched = schedules[turmaId];
+                        if (!turmaSched) continue;
+                        for (const slotId in turmaSched) {
+                          const slot = turmaSched[slotId];
+                          if (slot && slot.teacherId && slot.teacherId !== 'none') {
+                            teacherLoads[slot.teacherId] = (teacherLoads[slot.teacherId] || 0) + 1;
+                          }
+                        }
+                      }
+                      
+                      return (
+                        <div className={`overflow-y-auto pr-2 custom-scrollbar ${isProfessoresRoute ? 'flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 content-start' : 'max-h-60 space-y-2'}`}>
+                          {teachers
+                            .filter(t => !teacherLetterFilter || t.name.toUpperCase().startsWith(teacherLetterFilter))
+                            .map(teacher => {
+                            const teacherSubjects = subjects.filter(s => teacher.subjectIds?.includes(s.id));
+                            const currentLoad = teacherLoads[teacher.id] || 0;
+                            const expectedLoad = teacher.schoolWorkload;
+                            const isIncomplete = expectedLoad && currentLoad < expectedLoad;
+                            
+                            return (
+                              <div key={teacher.id} className={`relative flex flex-col p-3 rounded-xl hover:bg-white border transition-all group ${isIncomplete ? 'bg-amber-50/50 border-amber-200 hover:border-amber-300 shadow-sm' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                                <div className="flex flex-col min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2 pr-14">
+                                    <span className="text-xs font-black text-slate-800 break-words">{teacher.name}</span>
+                                    {teacher.schoolWorkload !== undefined && (
+                                      <span className={`text-[7px] font-black px-1 py-0.5 rounded uppercase tracking-tighter shadow-sm flex gap-1 ${isIncomplete ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-300 animate-pulse' : 'bg-purple-100 text-purple-700'}`} title={`Carga máxima fixada em ${teacher.schoolWorkload} aulas gerais neste colégio`}>
+                                        Geral: <span className={isIncomplete ? 'text-amber-900' : ''}>{currentLoad} / {teacher.schoolWorkload}h</span>
+                                        {isIncomplete && <AlertCircle className="w-2 h-2 inline" />}
+                                      </span>
+                                    )}
                                 {(teacher.schoolWorkloadManha !== undefined || teacher.schoolWorkloadTarde !== undefined || (teacher.schoolWorkloadNoite !== undefined && enableNoite)) && (
                                   <span className="text-[7px] font-black bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded uppercase tracking-tighter shadow-sm flex items-center gap-1" title="Cargas por período (Manhã, Tarde, Noite)">
                                     Períodos:
@@ -9589,7 +9685,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                           </div>
                         );
                       })}
-                    </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
                 )}
