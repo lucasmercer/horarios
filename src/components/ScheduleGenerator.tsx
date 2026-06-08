@@ -189,6 +189,567 @@ const formatTurmaName = (name: string): string => {
   return cleaned;
 };
 
+export const generateId = () => {
+  try {
+    return crypto.randomUUID();
+  } catch (e) {
+    return Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+  }
+};
+
+  const applyParanaCivicoMilitarMatrix = (currentSubjects: Subject[], currentTurmas: Turma[]) => {
+    let nextSubjects = currentSubjects.map(s => ({ ...s }));
+    let changed = false;
+
+    // Ordered by 6º, 7º, 8º, 9º, 1ª, 2ª, 3ª, 1ª(Mark), 2ª(Mark)
+    const grid: Record<string, number[]> = {
+      "Arte": [2, 2, 2, 2, 2, 2, 0, 2, 0],
+      "Arte II": [0, 0, 0, 0, 0, 0, 2, 0, 0],
+      "Biologia": [0, 0, 0, 0, 2, 0, 2, 2, 0],
+      "Cidadania e Civismo": [1, 1, 1, 1, 1, 1, 1, 1, 1],
+      "Ciências": [2, 3, 3, 2, 0, 0, 0, 0, 0],
+      "Educação Física": [2, 2, 2, 2, 2, 2, 2, 2, 2],
+      "Educação Financeira": [2, 2, 2, 2, 2, 2, 2, 0, 1],
+      "Ensino Religioso": [1, 1, 0, 0, 0, 0, 0, 0, 0],
+      "Filosofia": [0, 0, 0, 0, 0, 2, 0, 0, 2],
+      "Filosofia Análise de Textos Filosóficos": [0, 0, 0, 0, 0, 2, 0, 0, 0],
+      "Física": [0, 0, 0, 0, 0, 2, 2, 0, 2],
+      "Geografia": [2, 3, 2, 3, 0, 0, 0, 2, 0],
+      "Geografia do Paraná": [0, 0, 0, 0, 2, 0, 0, 0, 0],
+      "Geografia I": [0, 0, 0, 0, 0, 0, 2, 0, 0],
+      "História": [2, 2, 3, 2, 0, 2, 0, 0, 2],
+      "História do Paraná": [0, 0, 0, 0, 2, 0, 0, 0, 0],
+      "História I": [0, 0, 0, 0, 0, 0, 2, 0, 0],
+      "Língua Portuguesa": [4, 3, 4, 3, 4, 4, 4, 2, 3],
+      "Redação e Leitura": [0, 2, 2, 0, 0, 0, 0, 0, 0],
+      "Literatura e Produção de Texto": [0, 0, 0, 0, 0, 2, 0, 0, 0],
+      "Língua Inglesa": [2, 2, 2, 2, 2, 2, 0, 2, 2],
+      "Ling. Inglesa I": [0, 0, 0, 0, 0, 0, 2, 0, 0],
+      "Língua Espanhola": [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "Matemática": [4, 5, 5, 5, 4, 4, 4, 3, 2],
+      "Educação Digital Comp Prog e Robótica": [2, 2, 2, 2, 0, 0, 0, 0, 0],
+      "Educação Digital e Computação: Programação e IA": [0, 0, 0, 0, 2, 0, 0, 2, 1],
+      "Leitura Rec. Aprend. Língua Portuguesa": [2, 0, 0, 2, 2, 0, 0, 0, 0],
+      "Rec. Aprend. Matemática": [2, 0, 0, 2, 0, 0, 0, 0, 0],
+      "DOCÊNCIA II - LP": [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "DOCÊNCIA II - MAT.": [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "Química": [0, 0, 0, 0, 2, 0, 2, 2, 0],
+      "Sociologia": [0, 0, 0, 0, 0, 2, 0, 0, 1],
+      "Sociologia Gov Cid Sociedade": [0, 0, 0, 0, 0, 1, 0, 0, 0],
+      "Sociologia I": [0, 0, 0, 0, 0, 0, 2, 0, 0],
+      "Projeto De Vida": [0, 0, 0, 0, 0, 0, 1, 0, 0],
+      "Arte Paranaense": [0, 0, 0, 0, 1, 0, 0, 0, 0],
+      "Fundamentos do Marketing": [0, 0, 0, 0, 0, 0, 0, 2, 0],
+      "Tecnologias Digitais Aplicadas ao Marketing": [0, 0, 0, 0, 0, 0, 0, 1, 1],
+      "Análise de mercado e comportamento do consumidor": [0, 0, 0, 0, 0, 0, 0, 0, 2],
+      "Comunicação de marketing": [0, 0, 0, 0, 0, 0, 0, 1, 2],
+      "Técnicas de vendas e marketing de varejo": [0, 0, 0, 0, 0, 0, 0, 2, 1],
+      "Planejamento de marketing": [0, 0, 0, 0, 0, 0, 0, 1, 2],
+      "Segmentação e posicionamento de marketing": [0, 0, 0, 0, 0, 0, 0, 1, 0],
+      "Marketing de conteúdo": [0, 0, 0, 0, 0, 0, 0, 2, 0],
+      "Relações Interpessoais": [0, 0, 0, 0, 0, 0, 0, 0, 1],
+      "Pesquisa de Marketing": [0, 0, 0, 0, 0, 0, 0, 0, 1],
+      "Legislação aplicada ao marketing": [0, 0, 0, 0, 0, 0, 0, 0, 1],
+      "Cultura e Arte": [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    };
+
+    const gradeIndices = [
+      ['6º'], ['7º'], ['8º'], ['9º'], 
+      ['1ª', 'não mark'], ['2ª', 'não mark'], ['3ª'], 
+      ['1ª', 'mark'], ['2ª', 'mark']
+    ];
+
+    Object.keys(grid).forEach(subjName => {
+      let subj = nextSubjects.find(s => s.name.toLowerCase().trim() === subjName.toLowerCase().trim());
+      if (!subj) {
+        subj = { id: generateId(), name: subjName, levelConstraint: 'ambos', workload: 0, classWorkload: 0, customWorkloads: {} };
+        nextSubjects.push(subj);
+        changed = true;
+      }
+      if (!subj.customWorkloads) subj.customWorkloads = {};
+
+      currentTurmas.forEach(t => {
+        if (t.isRoom) return;
+        const nameL = t.name.toLowerCase();
+        let idx = -1;
+        
+        if (nameL.includes('6º') || nameL.includes('6°')) idx = 0;
+        else if (nameL.includes('7º') || nameL.includes('7°')) idx = 1;
+        else if (nameL.includes('8º') || nameL.includes('8°')) idx = 2;
+        else if (nameL.includes('9º') || nameL.includes('9°')) idx = 3;
+        else if (nameL.includes('3ª') || nameL.includes('3°') || nameL.includes('3a')) idx = 6;
+        else if (nameL.includes('1ª') || nameL.includes('1°') || nameL.includes('1a')) {
+          idx = nameL.includes('marketing') || nameL.includes('mark') ? 7 : 4;
+        }
+        else if (nameL.includes('2ª') || nameL.includes('2°') || nameL.includes('2a')) {
+          idx = nameL.includes('marketing') || nameL.includes('mark') ? 8 : 5;
+        }
+
+        if (idx >= 0) {
+          const targetWL = grid[subjName][idx];
+          if (subj.customWorkloads![t.id] !== targetWL) {
+            subj.customWorkloads![t.id] = targetWL;
+            changed = true;
+          }
+        }
+      });
+    });
+
+    return { nextSubjects, changed };
+  };
+
+const applyMatrixFix = (currentSubjects: Subject[], turmas: Turma[]) => {
+  return applyParanaCivicoMilitarMatrix(currentSubjects, turmas);
+  
+  let changed = false;
+  let nextSubjects = currentSubjects.map(s => {
+    let copy = { ...s };
+    if (s.customWorkloads) copy.customWorkloads = { ...s.customWorkloads };
+    return copy;
+  });
+
+  const ensureSubject = (name: string, isFundamental: boolean, isMedio: boolean, defaultId?: string) => {
+    const aliasMap: Record<string, string[]> = {
+        'língua portuguesa': ['português', 'portugues', 'língua portuguesa'],
+        'língua inglesa': ['inglês', 'ingles', 'ling. inglesa'],
+        'educação digital / robótica': ['educação digital / pens. computacional', 'pensamento computacional', 'robótica', 'educação digital', 'educação digital comp prog e robótica', 'educação digital e computação: programação e ia'],
+        'educação digital comp prog e robótica': ['educação digital / robótica', 'educação digital / pens. computacional', 'educação digital'],
+        'arte': ['artes'],
+        'educação física': ['ed. física', 'educacao fisica'],
+        'ensino religioso': ['religião', 'ens. religioso'],
+        'cidadania e civismo': ['cidadania'],
+        'educação financeira': ['ed. financeira', 'financeira']
+    };
+
+    // Explicit forced rewrites to prevent split subjects (user request)
+    let searchName = name.toLowerCase().trim();
+    if (searchName === 'educação digital / robótica') {
+      searchName = 'educação digital / pens. computacional';
+    }
+
+    let found = nextSubjects.find(s => s.name.toLowerCase().trim() === searchName);
+    
+    if (!found && searchName !== name.toLowerCase().trim()) {
+        found = nextSubjects.find(s => s.name.toLowerCase().trim() === name.toLowerCase().trim());
+    }
+    
+    if (!found) {
+      const aliases = aliasMap[searchName] || [];
+      
+      found = nextSubjects.find(s => {
+        const subjectName = s.name.toLowerCase().trim();
+        if (aliases.includes(subjectName) || aliases.some(alias => subjectName.includes(alias))) return true;
+        return subjectName.includes(searchName) || searchName.includes(subjectName);
+      });
+    }
+    
+    if (!found) {
+      found = {
+        id: defaultId || generateId(),
+        name: name,
+        levelConstraint: (isFundamental && isMedio) ? 'ambos' : isFundamental ? 'fundamental' : 'medio',
+        workload: 0,
+        classWorkload: 0,
+        customWorkloads: {}
+      };
+      nextSubjects.push(found);
+      changed = true;
+    } else {
+      // Adjust level constraint to be more permissive if needed
+      if (found.levelConstraint !== 'ambos') {
+        if (isFundamental && found.levelConstraint === 'medio') { found.levelConstraint = 'ambos'; changed = true; }
+        if (isMedio && found.levelConstraint === 'fundamental') { found.levelConstraint = 'ambos'; changed = true; }
+      }
+    }
+    return found;
+  };
+
+  const fundMatrix: Record<string, number> = {
+    'Língua Portuguesa': 4,
+    'Matemática': 4,
+    'Ciências': 3,
+    'História': 3,
+    'Geografia': 3,
+    'Educação Digital / Robótica': 2,
+    'Educação Física': 2,
+    'Língua Inglesa': 2,
+    'Arte': 2,
+    'Cidadania e Civismo': 2,
+    'Educação Financeira': 2,
+    'Ensino Religioso': 1
+  };
+
+  const emMatrix: Record<string, number> = {
+    'Língua Portuguesa': 4,
+    'Matemática': 4,
+    'Biologia': 2,
+    'Física': 2,
+    'Química': 2,
+    'História': 2,
+    'Geografia': 2,
+    'Educação Digital / Pens. Computacional': 2,
+    'Educação Física': 2,
+    'Língua Inglesa': 2,
+    'Cidadania e Civismo': 2,
+    'Arte': 1,
+    'Filosofia': 1,
+    'Sociologia': 1,
+    'Projeto de Vida': 1
+  };
+
+  const matchedFundIds: Record<string, string> = {};
+  Object.keys(fundMatrix).forEach(name => {
+    const subj = ensureSubject(name, true, false);
+    matchedFundIds[name] = subj.id;
+    if (subj.workloadFundamental !== fundMatrix[name]) {
+      subj.workloadFundamental = fundMatrix[name];
+      changed = true;
+    }
+    if (!subj.workload || subj.workload === 0) {
+        subj.workload = fundMatrix[name];
+        changed = true;
+    }
+  });
+
+  const matchedEmIds: Record<string, string> = {};
+  Object.keys(emMatrix).forEach(name => {
+    const subj = ensureSubject(name, false, true);
+    matchedEmIds[name] = subj.id;
+    if (subj.workloadMedio !== emMatrix[name]) {
+      subj.workloadMedio = emMatrix[name];
+      changed = true;
+    }
+    if (!subj.workload || subj.workload === 0) {
+        subj.workload = emMatrix[name];
+        changed = true;
+    }
+  });
+
+  // Apply to all active turmas
+  turmas.forEach(T => {
+    if (T.isRoom) return;
+    const isEF = /\b(6|7|8|9)\b|\b(6|7|8|9)º/i.test(T.name) || T.name.toLowerCase().includes('fundamental') || T.name.toLowerCase().includes('sexto') || T.name.toLowerCase().includes('sétimo') || T.name.toLowerCase().includes('oitavo') || T.name.toLowerCase().includes('nono');
+    const isMedio = (/\b(1|2|3)\b|\b(1|2|3)º|\b(1|2|3)ª/i.test(T.name) || T.name.toLowerCase().includes('médio')) && !isEF;
+
+    if (isEF || isMedio) {
+      nextSubjects.forEach(S => {
+        if (!S.customWorkloads) S.customWorkloads = {};
+        // Keep existing custom workloads for non-standard subjects
+        let isStandardSubject = false;
+        let targetWL = S.customWorkloads[T.id] || 0; // fallback but not strict zero
+
+        if (isEF) {
+          const matchedKey = Object.keys(matchedFundIds).find(k => matchedFundIds[k] === S.id);
+          if (matchedKey) {
+            targetWL = fundMatrix[matchedKey];
+            isStandardSubject = true;
+          } else if (Object.values(matchedEmIds).includes(S.id) && !Object.values(matchedFundIds).includes(S.id)) {
+            targetWL = 0;
+            isStandardSubject = true;
+          }
+        } else if (isMedio) {
+          const matchedKey = Object.keys(matchedEmIds).find(k => matchedEmIds[k] === S.id);
+          if (matchedKey) {
+            targetWL = emMatrix[matchedKey];
+            isStandardSubject = true;
+          } else if (Object.values(matchedFundIds).includes(S.id) && !Object.values(matchedEmIds).includes(S.id)) {
+            targetWL = 0;
+            isStandardSubject = true;
+          }
+        }
+
+        if (isStandardSubject && S.customWorkloads[T.id] !== targetWL) {
+          S.customWorkloads[T.id] = targetWL;
+          changed = true;
+        }
+      });
+    }
+  });
+
+  return { nextSubjects, changed };
+};
+
+const applyTeachersFix = (currentTeachers: Teacher[], currentSubjects: Subject[], currentTurmas: Turma[]) => {
+  let changedTeachers = false;
+  let changedSubjects = false;
+  let nextTeachers = currentTeachers.map(t => ({ ...t, subjectIds: [...(t.subjectIds || [])] }));
+  let nextSubjects = currentSubjects.map(s => ({ ...s }));
+
+  const renameRules: Record<string, string> = {
+    'leo': 'Ana Paula Hornung',
+    'dani': 'Danielly P.',
+    'dany p.': 'Danielly P.',
+    'dani p.': 'Danielly P.',
+    'dani s': 'Dani Setti',
+    'danielle s.': 'Dani Setti',
+    'mc': 'Marcia Calixto',
+    'marcia': 'Marcia Calixto',
+    'dani carles': 'Danielly C.',
+    'cris': 'Cristiane',
+    'luiz ad.': 'L. Aderson',
+    'luiz ad': 'L. Aderson',
+    'isabela': 'Isabella',
+    'maria e.': 'Maria Emilia',
+    'kati': 'Katiane',
+    'ana p.s.': 'Ana Paula S.',
+    'edu': 'Eduardo',
+    'suzi': 'Suzelaine',
+    'nicole': 'Nicolle',
+  };
+
+  nextTeachers.forEach(t => {
+    const lowerName = t.name.toLowerCase().trim();
+    if (renameRules[lowerName] && t.name !== renameRules[lowerName]) {
+      t.name = renameRules[lowerName];
+      changedTeachers = true;
+    }
+  });
+
+  const getOrCreateSubject = (name: string, isFund: boolean, isMedio: boolean) => {
+    let lookup = name.toLowerCase().trim();
+    let found = nextSubjects.find(s => s.name.toLowerCase().trim() === lookup);
+    if (!found) {
+      found = nextSubjects.find(s => s.name.toLowerCase().includes(lookup) || lookup.includes(s.name.toLowerCase()));
+    }
+    if (!found) {
+      found = {
+        id: generateId(),
+        name: name,
+        levelConstraint: (isFund && isMedio) ? 'ambos' : isFund ? 'fundamental' : 'medio',
+        workload: 1, // Default 1 so it's not 0
+        classWorkload: 1,
+        customWorkloads: {}
+      };
+      nextSubjects.push(found);
+      changedSubjects = true;
+    }
+    return found;
+  };
+
+  const teacherMap: Record<string, string[]> = {
+    'Allana': ['Matemática'],
+    'Dani Setti': ['Rec. Aprend. Matemática', 'Recomposição de Aprendizagem Matemática', 'Matemática'],
+    'Suzelaine': ['Língua Portuguesa', 'Leitura Rec. Aprend. Língua Portuguesa'],
+    'Bernadete': ['Arte'],
+    'Eliane': ['Língua Inglesa', 'Ling. Inglesa I'],
+    'Joana': ['Educação Física'],
+    'Marcia Calixto': ['Filosofia', 'Cidadania e Civismo', 'Ensino Religioso', 'Filosofia Análise de Textos Filosóficos'],
+    'Nicolle': ['Biologia'],
+    'Rosmarina': ['Matemática'],
+    'Ana Paula S.': ['Geografia', 'Geografia do Paraná', 'Geografia I'],
+    'Ana Paula': ['Geografia', 'História', 'Geografia do Paraná', 'Geografia I'],
+    'Meire': ['Leitura e Produção de Texto', 'Redação e Leitura', 'Redação'],
+    'Matheus': ['Matemática'],
+    'Cristiane': ['Educação Financeira'],
+    'L. Aderson': ['História', 'História I', 'História do Paraná'],
+    'Luiz Agnaldo': ['História', 'Ensino Religioso'],
+    'Nathan': ['Física', 'Matemática', 'DOCÊNCIA II - MAT.', 'Rec. Aprend. Matemática'],
+    'Eduardo': ['Química'],
+    'Bruna': ['Ciências'],
+    'Valdemar': ['Ciências'],
+    'Adriano': ['Ciências'],
+    'Janete': ['Ensino Religioso', 'Geografia'],
+    'Katiane': ['Leitura Rec. Aprend. Língua Portuguesa', 'DOCÊNCIA II - LP', 'Língua Portuguesa'],
+    'Maria Emilia': ['Língua Portuguesa'],
+    'Tamires': ['Língua Portuguesa'],
+    'Laize': ['Língua Portuguesa'],
+    'Matilde': ['Sociologia', 'Sociologia Gov Cid Sociedade', 'Sociologia I'],
+    'Regiane': ['Sociologia'],
+    'Ana Paula Hornung': ['Marketing', 'Análise de Mercado', 'Fundamentos de Marketing', 'Comunicação e Marketing', 'Segmentação de Mercado', 'Relações Interpessoais', 'Tecnologias Digitais Aplicadas ao Marketing', 'Análise de mercado e comportamento do consumidor', 'Técnicas de vendas e marketing de varejo', 'Planejamento de marketing', 'Marketing de conteúdo', 'Pesquisa de Marketing', 'Legislação aplicada ao marketing'],
+    'Danielly P.': ['Educação Digital / Pens. Computacional', 'Matemática', 'Robótica', 'Educação Digital e Computação: Programação e IA', 'Educação Digital Comp Prog e Robótica'],
+    'Danielly C.': ['Matemática'],
+    'Maria Regina': ['Matemática'],
+    'Gabrielle': ['Língua Inglesa'],
+    'Miguel': ['Educação Física'],
+    'Kelly': ['Projeto de Vida', 'Arte II', 'Arte Paranaense', 'Cultura e Arte', 'Arte'],
+    'Lucineia': ['Ciências'],
+    'Valdeci': ['Geografia'],
+    'Isabella': ['Língua Portuguesa']
+  };
+
+  const teacherTurmaMap: Record<string, Record<string, string[]>> = {
+    'Allana': {
+      'Matemática': ['6º A']
+    },
+    'Rosmarina': {
+      'Matemática': ['7º A', '8º A', '7º B', '7º C']
+    },
+    'Matheus': {
+      'Matemática': ['9º A', '1ª A', '2ª A', '3ª A']
+    },
+    'Danielly C.': {
+      'Matemática': ['8º B', '9º B', '9º C']
+    },
+    'Maria Regina': {
+      'Matemática': ['6º B', '6º C']
+    },
+    'Danielly P.': {
+      'Matemática': ['1ª B', '2ª B'],
+      'Educação Digital / Pens. Computacional': ['6º A', '6º B', '6º C', '7º A', '7º B', '7º C', '8º A', '8º B', '9º A', '9º B', '9º C', '1ª A', '2ª A', '3ª A', '1ª B', '2ª B'],
+      'Educação Digital Comp Prog e Robótica': ['6º A', '6º B', '6º C', '7º A', '7º B', '7º C', '8º A', '8º B', '9º A', '9º B', '9º C'],
+      'Educação Digital e Computação: Programação e IA': ['1ª A', '1ª B', '2ª B'] // added 2B
+    },
+    'Suzelaine': {
+      'Língua Portuguesa': ['6º A', '7º A', '8º A', '6º B', '6º C', '7º B', '7º C'],
+      'Leitura Rec. Aprend. Língua Portuguesa': ['6º A', '6º B', '6º C']
+    },
+    'Tamires': {
+      'Língua Portuguesa': ['9º A', '2ª A']
+    },
+    'Laize': {
+      'Língua Portuguesa': ['1ª A', '3ª A']
+    },
+    'Isabella': {
+      'Língua Portuguesa': ['2ª B', '8º B']
+    },
+    'Maria Emilia': {
+      'Língua Portuguesa': ['1ª B']
+    },
+    'Meire': {
+      'Redação': ['7º A', '8º A', '7º B', '7º C', '8º B'],
+      'Redação e Leitura': ['7º A', '8º A', '7º B', '7º C', '8º B'],
+      'Literatura e Produção de Texto': ['2ª A', '3ª A', '9º B', '9º C'], // Wait
+      'Leitura e Produção de Texto': ['2ª A', '3ª A', '9º B', '9º C']
+    },
+    'Katiane': {
+      'Leitura Rec. Aprend. Língua Portuguesa': ['9º A', '2ª A', '8º B', '9º B', '9º C'],
+      'DOCÊNCIA II - LP': ['6º A', '6º B', '6º C']
+    },
+    'Dani Setti': {
+      'Rec. Aprend. Matemática': ['6º A', '9º A', '2ª A', '6º B', '6º C', '9º B', '9º C']
+    },
+    'Nathan': {
+      'Física': ['2ª A', '3ª A', '2ª B'],
+      'DOCÊNCIA II - MAT.': ['6º A', '9º A', '6º B', '6º C', '9º B', '9º C']
+    },
+    'Eduardo': {
+      'Química': ['1ª A', '1ª B', '2ª B']
+    },
+    'Valdemar': {
+      'Ciências': ['6º A', '7º A', '6º B', '7º B']
+    },
+    'Bruna': {
+      'Ciências': ['8º A', '9º A']
+    },
+    'Adriano': {
+      'Ciências': ['7º C', '8º B', '9º B', '9º C']
+    },
+    'Joana': {
+      'Educação Física': ['6º A', '7º A', '8º A', '9º A', '1ª A', '2ª A', '3ª A', '1ª B', '2ª B', '6º B', '7º B', '7º C', '8º B', '9º B', '9º C']
+    },
+    'Cristiane': {
+      'Educação Financeira': ['6º A', '7º A', '8º A', '9º A', '1ª A', '2ª A', '3ª A', '1ª B', '2ª B', '6º B', '7º B', '7º C', '8º B', '9º B', '9º C']
+    },
+    'Marcia Calixto': {
+      'Cidadania e Civismo': ['6º A', '7º A', '8º A', '9º A', '1ª A', '2ª A', '3ª A', '1ª B', '2ª B', '6º B', '6º C', '7º B', '7º C', '8º B', '9º B', '9º C'],
+      'Ensino Religioso': ['6º A', '7º A'],
+      'Filosofia': ['2ª A', '2ª B'],
+      'Filosofia Análise de Textos Filosóficos': ['2ª A']
+    },
+    'Valdeci': {
+      'Geografia': ['6º A', '7º A', '8º A', '9º A', '6º B', '6º C']
+    },
+    'Ana Paula S.': {
+      'Geografia I': ['3ª A'],
+      'Geografia do Paraná': ['1ª A']
+    },
+    'Ana Paula': {
+      'Geografia': ['1ª A', '1ª B'],
+      'História': ['8º B', '9º B', '9º C']
+    },
+    'Janete': {
+      'Geografia': ['7º B', '7º C', '8º B', '9º B', '9º C'],
+      'Ensino Religioso': ['6º B']
+    },
+    'L. Aderson': {
+      'História': ['6º A', '7º A', '8º A', '9º A', '2ª A', '2ª B'],
+      'História do Paraná': ['1ª A'],
+      'História I': ['3ª A']
+    },
+    'Luiz Agnaldo': {
+      'História': ['6º B', '6º C', '7º B', '7º C'],
+      'Ensino Religioso': ['6º C', '7º B', '7º C']
+    },
+    'Eliane': {
+      'Língua Inglesa': ['6º A', '7º A', '8º A', '9º A', '1ª A', '2ª A', '1ª B', '2ª B'],
+      'Ling. Inglesa I': ['3ª A']
+    },
+    'Gabrielle': {
+      'Língua Inglesa': ['6º B', '6º C', '7º B', '7º C', '8º B', '9º B', '9º C']
+    },
+    'Regiane': {
+      'Sociologia': ['2ª A', '2ª B']
+    },
+    'Matilde': {
+      'Sociologia Gov Cid Sociedade': ['1ª A', '2ª A'],
+      'Sociologia I': ['3ª A']
+    },
+    'Nicolle': {
+      'Biologia': ['1ª A', '1ª B']
+    },
+    'Kelly': {
+      'Arte': ['1ª B', '2ª B', '7º B', '7º C', '8º B', '9º B', '9º C'],
+      'Arte II': ['3ª A'],
+      'Projeto de Vida': ['3ª A'],
+      'Arte Paranaense': ['1ª A']
+    },
+    'Bernadete': {
+      'Arte': ['6º A', '7º A', '8º A', '9º A', '1ª A', '2ª A', '6º B', '6º C']
+    },
+    'Ana Paula Hornung': {
+      'Marketing': ['1ª B', '2ª B'],
+      'Fundamentos do Marketing': ['1ª B'],
+      'Tecnologias Digitais Aplicadas ao Marketing': ['1ª B', '2ª B'],
+      'Análise de mercado e comportamento do consumidor': ['2ª B'],
+      'Comunicação de marketing': ['1ª B', '2ª B'],
+      'Técnicas de vendas e marketing de varejo': ['1ª B', '2ª B'],
+      'Planejamento de marketing': ['1ª B', '2ª B'],
+      'Segmentação e posicionamento de marketing': ['1ª B'],
+      'Marketing de conteúdo': ['1ª B'],
+      'Relações Interpessoais': ['2ª B'],
+      'Pesquisa de Marketing': ['2ª B'],
+      'Legislação aplicada ao marketing': ['2ª B']
+    }
+  };
+
+  Object.entries(teacherMap).forEach(([teacherName, expectedSubjects]) => {
+    let teacher = nextTeachers.find(t => t.name.toLowerCase().trim() === teacherName.toLowerCase().trim());
+    if (!teacher) {
+      teacher = {
+        id: generateId(),
+        name: teacherName,
+        subjectIds: [],
+        unavailability: []
+      };
+      nextTeachers.push(teacher);
+      changedTeachers = true;
+    }
+
+    expectedSubjects.forEach(subjectName => {
+      const subject = getOrCreateSubject(subjectName, true, true);
+      if (!teacher.subjectIds.includes(subject.id)) {
+        teacher.subjectIds.push(subject.id);
+        changedTeachers = true;
+      }
+    });
+
+    const specificTurmas = teacherTurmaMap[teacherName];
+    if (specificTurmas) {
+      if (!teacher.subjectTurmaMap) teacher.subjectTurmaMap = {};
+      Object.entries(specificTurmas).forEach(([subName, turmaNames]) => {
+        const subject = getOrCreateSubject(subName, true, true);
+        const matchedTurmas = currentTurmas.filter(t => turmaNames.some(tn => t.name.includes(tn)));
+        if (matchedTurmas.length > 0) {
+           teacher.subjectTurmaMap![subject.id] = matchedTurmas.map(t => t.id);
+           changedTeachers = true;
+        }
+      });
+    }
+  });
+
+  return { nextTeachers, nextSubjects, changedTeachers, changedSubjects };
+};
+
 const healSubjectConstraints = (currentSubjects: Subject[], currentSchedules: AllSchedules, currentTurmas: Turma[]) => {
   if (!currentSubjects || currentSubjects.length === 0) return { updatedSubjects: currentSubjects, changed: false };
 
@@ -423,10 +984,10 @@ export default function ScheduleGenerator() {
   }, [schedulesHistory, historyIndex]);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [version, setVersion] = useState<number>(74);
-  const [logoUrl, setLogoUrl] = useState<string>('http://lucasleniar.com.br/mint/civico.png');
+  const [logoUrl, setLogoUrl] = useState<string>('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRIkG3YW1IlvK8UKgpoK67sl2ozdj_YidxNKg&s');
   const [showLogoInput, setShowLogoInput] = useState(false);
   const [tempLogoUrl, setTempLogoUrl] = useState('');
-  const [schoolName, setSchoolName] = useState<string>('CE LUCAS LENIAR EF.M.P.');
+  const [schoolName, setSchoolName] = useState<string>('CE LUCAS LENIAR');
   const [showSchoolInput, setShowSchoolInput] = useState(false);
   const [tempSchoolName, setTempSchoolName] = useState('');
   const [isCivicoMilitar, setIsCivicoMilitar] = useState<boolean>(() => {
@@ -593,6 +1154,7 @@ export default function ScheduleGenerator() {
   const [mudancasMode, setMudancasMode] = useState<'manha' | 'tarde' | 'noite' | 'especificas'>(importShift);
   const [mudancasSelectedTurmas, setMudancasSelectedTurmas] = useState<string[]>([]);
   const [autoGenMode, setAutoGenMode] = useState<'all' | 'empty'>('all');
+  const [showOnlyConflicts, setShowOnlyConflicts] = useState(false);
   const [autoGenForceConflicts, setAutoGenForceConflicts] = useState(false);
   const [autoGenShift, setAutoGenShift] = useState<'both' | 'manha' | 'tarde' | 'noite' | 'labs'>('both');
   const [isAutoGenerateResultsModalOpen, setIsAutoGenerateResultsModalOpen] = useState(false);
@@ -858,6 +1420,18 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
   const [newTurmaName, setNewTurmaName] = useState('');
   const [newTurmaShift, setNewTurmaShift] = useState<'manha' | 'tarde' | 'noite' | 'todas'>('todas');
   const [newTurmaDailyClassCount, setNewTurmaDailyClassCount] = useState<5 | 6>(6);
+
+  useEffect(() => {
+    // Automatically set daily class count based on profile and class name
+    if (!newTurmaName) return;
+    const isEF = /(?:^|\\D)(?:6|7|8|9)(?:\\D|$)|(?:sexto|sétimo|oitavo|nono)|fundamental/i.test(newTurmaName.trim());
+    if (isCivicoMilitar) {
+      setNewTurmaDailyClassCount(6);
+    } else {
+      setNewTurmaDailyClassCount(6);
+    }
+  }, [newTurmaName, isCivicoMilitar]);
+
   const [newTurmaIsTechnical, setNewTurmaIsTechnical] = useState<boolean>(false);
   const [editingTurmaId, setEditingTurmaId] = useState<string | null>(null);
 
@@ -902,13 +1476,22 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       // Excluir as turmas virtuais das salas das listagens normais
       if (t.isRoom) return false;
       
-      if (t.shift) return t.shift === importShift;
-      // Fallback for older data or implicitly named turmas
-      const isNamedTarde = t.name.toLowerCase().includes('tarde') || t.id.toLowerCase().includes('tarde');
-      const isNamedNoite = t.name.toLowerCase().includes('noite') || t.id.toLowerCase().includes('noite');
-      if (importShift === 'noite') return isNamedNoite;
-      if (importShift === 'tarde') return isNamedTarde;
-      return !isNamedTarde && !isNamedNoite;
+      let baseFilter = false;
+      if (t.shift) {
+        baseFilter = t.shift === importShift;
+      } else {
+        // Fallback for older data or implicitly named turmas
+        const isNamedTarde = t.name.toLowerCase().includes('tarde') || t.id.toLowerCase().includes('tarde');
+        const isNamedNoite = t.name.toLowerCase().includes('noite') || t.id.toLowerCase().includes('noite');
+        if (importShift === 'noite') baseFilter = isNamedNoite;
+        else if (importShift === 'tarde') baseFilter = isNamedTarde;
+        else baseFilter = !isNamedTarde && !isNamedNoite;
+      }
+
+      if (baseFilter && showOnlyConflicts) {
+        return turmaHasConflicts(t.id);
+      }
+      return baseFilter;
     })
   );
 
@@ -1126,15 +1709,6 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     }
   }, [importShift, turmas.length]);
 
-  // Safe UUID generator
-  const generateId = () => {
-    try {
-      return crypto.randomUUID();
-    } catch (e) {
-      return Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-    }
-  };
-
   // Load data
   useEffect(() => {
     try {
@@ -1221,6 +1795,14 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             t.shift = 'tarde';
             updated = true;
           }
+          
+          if (!t.isRoom) {
+            if (t.dailyClassCount !== 6) {
+              t.dailyClassCount = 6;
+              updated = true;
+            }
+          }
+          
           return t;
         });
 
@@ -1322,6 +1904,93 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     }
   }, []);
 
+  // Force Apply Curricular Matrix & Teachers Mapping
+  useEffect(() => {
+    if (!dataLoaded) return;
+    
+    // Check version to run one-off
+    const applied = localStorage.getItem('cecm_matrix_lucas_v16_fix');
+    if (applied === 'true') return;
+    
+    // Create copies and apply both fixes
+    let currentSubjects = subjects;
+    let currentTeachers = teachers;
+    let didChange = false;
+
+    const matrixFixResult = applyMatrixFix(currentSubjects, turmas);
+    if (matrixFixResult.changed) {
+      currentSubjects = matrixFixResult.nextSubjects;
+      didChange = true;
+    }
+
+    const teacherFixResult = applyTeachersFix(currentTeachers, currentSubjects, turmas);
+    if (teacherFixResult.changedTeachers || teacherFixResult.changedSubjects) {
+      currentTeachers = teacherFixResult.nextTeachers;
+      currentSubjects = teacherFixResult.nextSubjects;
+      didChange = true;
+    }
+
+    // Deduplicate teachers
+    const uniqueTeachers: Teacher[] = [];
+    const teacherIdMap: Record<string, string> = {};
+    let deduplicated = false;
+
+    currentTeachers.forEach(t => {
+      const existing = uniqueTeachers.find(u => u.name.toLowerCase().trim() === t.name.toLowerCase().trim());
+      if (existing) {
+        teacherIdMap[t.id] = existing.id;
+        existing.subjectIds = Array.from(new Set([...(existing.subjectIds || []), ...(t.subjectIds || [])]));
+        existing.turmaIds = Array.from(new Set([...(existing.turmaIds || []), ...(t.turmaIds || [])]));
+        const newSubjectTurmaMap: Record<string, string[]> = { ...(existing.subjectTurmaMap || {}) };
+        if (t.subjectTurmaMap) {
+          for (const [sId, tIds] of Object.entries(t.subjectTurmaMap)) {
+            const arr1 = newSubjectTurmaMap[sId] || [];
+            const arr2 = (tIds as string[]) || [];
+            newSubjectTurmaMap[sId] = Array.from(new Set([...arr1, ...arr2]));
+          }
+        }
+        existing.subjectTurmaMap = newSubjectTurmaMap;
+        deduplicated = true;
+        didChange = true;
+      } else {
+        uniqueTeachers.push(t);
+      }
+    });
+
+    if (deduplicated) {
+      currentTeachers = uniqueTeachers;
+      setSchedules((prevSchedules) => {
+        let changedSchedules = false;
+        const nextSchedules = JSON.parse(JSON.stringify(prevSchedules));
+        for (const tId in nextSchedules) {
+          const turmaSched = nextSchedules[tId];
+          for (const slotKey in turmaSched) {
+            const slotData = turmaSched[slotKey];
+            if (slotData.teacherId && teacherIdMap[slotData.teacherId]) {
+              slotData.teacherId = teacherIdMap[slotData.teacherId];
+              changedSchedules = true;
+            }
+          }
+        }
+        if (changedSchedules) {
+          localStorage.setItem('cecm_schedules', JSON.stringify(nextSchedules));
+          return nextSchedules;
+        }
+        return prevSchedules;
+      });
+    }
+
+    if (didChange) {
+      setSubjects(currentSubjects);
+      setTeachers(currentTeachers);
+      
+      localStorage.setItem('cecm_subjects', JSON.stringify(currentSubjects));
+      localStorage.setItem('cecm_teachers', JSON.stringify(currentTeachers));
+    }
+    
+    localStorage.setItem('cecm_matrix_lucas_v16_fix', 'true');
+  }, [dataLoaded, turmas, subjects, teachers]);
+
   // Conflict Detection
   const getConflicts = (dayId: string, period: number, teacherId: string, excludeTurmaId: string, optAssociatedTurmaId?: string) => {
     if (!teacherId) return [];
@@ -1391,6 +2060,18 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     return conflicts;
   };
 
+  const turmaHasConflicts = (turmaId: string) => {
+    if (!schedules[turmaId]) return false;
+    return Object.keys(schedules[turmaId]).some(slotId => {
+      const slot = schedules[turmaId][slotId];
+      if (!slot || !slot.teacherId) return false;
+      const [dayId, pStr] = slotId.split('-');
+      const period = parseInt(pStr);
+      const conflicts = getConflicts(dayId, period, slot.teacherId, turmaId, slot.associatedTurmaId);
+      return conflicts.length > 0;
+    });
+  };
+
   // Save data
   const handlePrint = () => {
     window.print();
@@ -1423,6 +2104,119 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     }, 500);
     return () => clearTimeout(timeoutDesc);
   }, [teachers, subjects, turmas, schedules, version, logoUrl, schoolName, academicSystem, academicPeriod, academicStartDate, academicEndDate, academicDates, isCivicoMilitar, dataLoaded]);
+
+  const handleModalidadeChange = (isCCM: boolean) => {
+    setIsCivicoMilitar(isCCM);
+    // Apply default matrices to existing turmas automatically based on the new modality profile
+    setSubjects(prev => {
+      let updatedSubjects = [...prev];
+      turmas.forEach(t => {
+        if (t.isRoom) return;
+        const isEF = /(?:^|\\D)(?:6|7|8|9)(?:\\D|$)|(?:sexto|sétimo|oitavo|nono)|fundamental/i.test(t.name);
+        
+        const targetWorkloads: Record<string, number> = {};
+        if (isEF) {
+          if (isCCM) {
+            Object.assign(targetWorkloads, {
+              'sub-port': 5, 'sub-mat': 5, 'sub-cien': 4, 'sub-his': 3, 'sub-geo': 3,
+              'sub-ing': 2, 'sub-art': 2, 'sub-ef': 2, 'sub-ensr': 1,
+              'sub-cid': 2, 'sub-edfin': 1
+            });
+          } else {
+            Object.assign(targetWorkloads, {
+              'sub-port': 4, 'sub-mat': 4, 'sub-cien': 3, 'sub-his': 3, 'sub-geo': 3,
+              'sub-robot': 2, 'sub-ef': 2, 'sub-ing': 2, 'sub-art': 2, 'sub-cid': 2,
+              'sub-edfin': 2, 'sub-ensr': 1
+            });
+          }
+        } else { // Ensino Médio
+          if (isCCM) {
+            Object.assign(targetWorkloads, {
+              'sub-port': 4, 'sub-mat': 4, 'sub-bio': 2, 'sub-fis': 2, 'sub-quim': 2,
+              'sub-his': 2, 'sub-geo': 2, 'sub-ing': 2, 'sub-art': 1, 'sub-ef': 1,
+              'sub-fil': 1, 'sub-soc': 1,
+              'sub-cid': 2, 'sub-eddigc': 2, 'sub-edfin': 1, 'sub-pvida': 1
+            });
+          } else {
+            Object.assign(targetWorkloads, {
+              'sub-port': 4, 'sub-mat': 4, 'sub-bio': 2, 'sub-fis': 2, 'sub-quim': 2,
+              'sub-his': 2, 'sub-geo': 2, 'sub-eddigc': 2, 'sub-edfin': 0, // Not requested? Wait, let me check. 'sub-cid' = 2, 'sub-ef' = 2, 'sub-ing' = 2...
+              'sub-ing': 2, 'sub-ef': 2, 'sub-art': 1, 'sub-fil': 1, 'sub-soc': 1,
+              'sub-pvida': 1, 'sub-cid': 2
+            });
+          }
+        }
+
+        // Reset workloads for this turma
+        updatedSubjects = updatedSubjects.map(s => {
+          const defaultW = targetWorkloads[s.id] || 0;
+          const isCurrentlyAllowed = s.allowedTurmaIds && s.allowedTurmaIds.includes(t.id);
+          const hasCustom = s.customWorkloads && s.customWorkloads[t.id] !== undefined;
+          
+          if (defaultW > 0 || hasCustom || isCurrentlyAllowed) {
+            const allowedIds = s.allowedTurmaIds ? new Set(s.allowedTurmaIds) : new Set<string>();
+            const cw = { ...(s.customWorkloads || {}) };
+            
+            if (defaultW > 0) {
+              allowedIds.add(t.id);
+              cw[t.id] = defaultW;
+            } else {
+              delete cw[t.id]; // Remove from customWorkloads if it should be 0
+              allowedIds.delete(t.id); // FIX: properly remove from allowed list
+            }
+            
+            return {
+              ...s,
+              allowedTurmaIds: Array.from(allowedIds),
+              customWorkloads: cw,
+              workload: Math.max(...Object.values(cw).map(v => Number(v) || 0), 0)
+            };
+          }
+          return s;
+        });
+      });
+      return updatedSubjects;
+    });
+
+    // Also adjust daily classes rules across all turmas
+    setTurmas(prev => prev.map(t => {
+      if (t.isRoom) return t;
+      const isEF = /(?:^|\\D)(?:6|7|8|9)(?:\\D|$)|(?:sexto|sétimo|oitavo|nono)|fundamental/i.test(t.name);
+      let autoDailyClassCount = 6;
+      if (isCCM) {
+        autoDailyClassCount = 6;
+      } else {
+        autoDailyClassCount = 6;
+      }
+      return { ...t, dailyClassCount: autoDailyClassCount as 5 | 6 };
+    }));
+
+    // Optionally cleanup 6th periods in schedules when converting to 5
+    // But since it can be heavy and we already have logic to hide 6th periods from standard display if classCount=5, it's ok not to delete strictly yet, or we can just run the cleaner.
+    // Cleanup is removed to preserve 6th periods for 30 workload curriculums
+    /* setSchedules(prev => {
+      const next = { ...prev };
+      turmas.forEach(t => {
+        const isEF = /(?:^|\\D)(?:6|7|8|9)(?:\\D|$)|(?:sexto|sétimo|oitavo|nono)|fundamental/i.test(t.name);
+        if (!isCCM && isEF && next[t.id]) {
+          const copy = { ...next[t.id] };
+          const periodsToRemove = t.shift === 'noite' ? [18] : t.shift === 'tarde' ? [12] : [6];
+          const days = ['seg', 'ter', 'qua', 'qui', 'sex'];
+          let changed = false;
+          days.forEach(day => {
+            periodsToRemove.forEach(p => {
+              if (copy[`${day}-${p}`]) {
+                delete copy[`${day}-${p}`];
+                changed = true;
+              }
+            });
+          });
+          if (changed) next[t.id] = copy;
+        }
+      });
+      return next;
+    }); */
+  };
 
   // Backup functions
   useEffect(() => {
@@ -1622,6 +2416,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   // Heal shift if it is incorrectly stored in the raw backup as 'manha'
                   t.shift = 'tarde';
                 }
+                // Enforce 6 classes per day (30 weekly slots) for all standard turmas to support the 30-class matrix
+                if (t.dailyClassCount !== 6) {
+                   t.dailyClassCount = 6;
+                }
               }
               return t;
             });
@@ -1662,12 +2460,13 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             
             // Apply subject constraints healing post import
             const { updatedSubjects } = healSubjectConstraints(importedSubjects, normalizedSchedules, importedTurmas);
-            setSubjects(updatedSubjects);
-            localStorage.setItem('cecm_subjects', JSON.stringify(updatedSubjects));
+            const { nextSubjects: finalSubjects } = applyMatrixFix(updatedSubjects, importedTurmas);
+            setSubjects(finalSubjects);
+            localStorage.setItem('cecm_subjects', JSON.stringify(finalSubjects));
             localStorage.setItem('cecm_substitutions', JSON.stringify(data.substitutions || []));
 
             setLogoUrl(data.logoUrl || '');
-            setSchoolName(data.schoolName || 'CE LUCAS LENIAR EF.M.P.');
+            setSchoolName(data.schoolName || 'CE LUCAS LENIAR');
             
             if (data.timeRangesManha) setTimeRangesManha(data.timeRangesManha);
             if (data.timeRangesTarde) setTimeRangesTarde(data.timeRangesTarde);
@@ -1846,6 +2645,17 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
     // --- DYNAMIC/CONFIGURABLE CONSTRAINTS ---
 
+    // 0. EXPLICIT CUSTOM WORKLOAD CHECK (Highest Priority)
+    if (S.customWorkloads && S.customWorkloads[TId] !== undefined) {
+      const w = S.customWorkloads[TId];
+      if (w >= 0) {
+        let labW = S.labWorkload ?? 0;
+        if (labW > w) labW = w;
+        let classW = Math.max(0, w - labW);
+        return { workload: w, classWorkload: classW, labWorkload: labW };
+      }
+    }
+
     // 1. Direct whitelist of specific Turmas (if populated)
     if (S.allowedTurmaIds && S.allowedTurmaIds.length > 0) {
       if (!S.allowedTurmaIds.includes(TId)) {
@@ -1985,25 +2795,6 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     
     let finalClassWorkload = S.classWorkload ?? 0;
     
-    // Explicit 6th grade overrides
-    if (T.name.includes('6') || T.name.includes('6º')) {
-      if (subjectNameLower === 'português' || subjectNameLower === 'portugues' || subjectNameLower === 'língua portuguesa') {
-        if (workload === 5 && !custom) {
-          return { workload: 4, classWorkload: 4, labWorkload: S.labWorkload ?? 0 };
-        }
-      }
-      if (subjectNameLower === 'matemática' || subjectNameLower === 'matematica') {
-        if (workload === 5 && !custom) {
-          return { workload: 4, classWorkload: 4, labWorkload: S.labWorkload ?? 0 };
-        }
-      }
-      if (subjectNameLower.includes('redação') || subjectNameLower.includes('redacao') || subjectNameLower.includes('leitura')) {
-         if (!custom && workload === 0) {
-           return { workload: 1, classWorkload: 1, labWorkload: 0 };
-         }
-      }
-    }
-
     // Proportional down-scale for lab workload if workload changed
     let labWorkload = S.labWorkload ?? 0;
     
@@ -2121,735 +2912,14 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       setIsAutoGenerateModalOpen(false);
       setIsAutoGenerateResultsModalOpen(true);
       setIsAutoGenerateResultsMinimized(false);
-      setIsGenerating(false);
-      setIsLoading(false);
-      setIsSaved(false);
-      return;
-    }
-
-    try {
-      setIsSaved(false);
-      const errors: string[] = [];
-    const pendingLessons: { turmaName: string; subjectName: string; teacherName: string; reason: string; turmaId: string; subjectId: string; teacherId: string; isDouble: boolean }[] = [];
-
-    const activeTurmas = turmas.filter(t => {
-      if (t.isRoom) return false;
-      if (overrideTurmaId && (Array.isArray(overrideTurmaId) ? !overrideTurmaId.includes(t.id) : t.id !== overrideTurmaId)) return false;
-      
-      const detectedShift = getTurmaShift(t);
-      if (effectiveShift === 'manha') {
-        return detectedShift === 'manha';
-      }
-      if (effectiveShift === 'tarde') {
-        return detectedShift === 'tarde';
-      }
-      if (effectiveShift === 'noite') {
-        return detectedShift === 'noite';
-      }
-      return true; // For 'both' or 'labs'
-    });
-
-    const specialRooms = turmas.filter(t => t.isRoom);
-    const newSchedules: AllSchedules = {};
-    Object.keys(schedules).forEach(tid => {
-      newSchedules[tid] = { ...(schedules[tid] || {}) };
-    });
-
-    const targetPeriods = new Set<number>();
-    if (effectiveShift === 'both' || effectiveShift === 'labs' || effectiveShift === 'manha') {
-      [1, 2, 3, 4, 5, 6].forEach(p => targetPeriods.add(p));
-    }
-    if (effectiveShift === 'both' || effectiveShift === 'labs' || effectiveShift === 'tarde') {
-      [7, 8, 9, 10, 11, 12].forEach(p => targetPeriods.add(p));
-    }
-    if ((effectiveShift === 'both' && enableNoite) || effectiveShift === 'labs' || effectiveShift === 'noite') {
-      PERIODS_NOITE.forEach(p => targetPeriods.add(p));
+    } else {
+      alert("Houve um problema ao conectar com a API de geração ou ocorreu uma falha no processamento pesado.");
     }
     
-    const clearSchedulesForMode = () => {
-      Object.keys(newSchedules).forEach(tid => {
-        const isRoom = turmas.find(t => t.id === tid)?.isRoom;
-        if (overrideTurmaId && !isRoom && (Array.isArray(overrideTurmaId) ? !overrideTurmaId.includes(tid) : tid !== overrideTurmaId)) return;
-
-        Object.keys(newSchedules[tid]).forEach(slotId => {
-          const [_, pStr] = slotId.split('-');
-          const p = parseInt(pStr);
-          
-          if (overrideTurmaId && isRoom) {
-            const associatedId = newSchedules[tid][slotId]?.associatedTurmaId;
-            if (associatedId && (Array.isArray(overrideTurmaId) ? !overrideTurmaId.includes(associatedId) : associatedId !== overrideTurmaId)) return;
-          }
-
-          if (effectiveShift === 'labs') {
-            if (isRoom) {
-              delete newSchedules[tid][slotId];
-            }
-          } else {
-            if (targetPeriods.has(p)) {
-              delete newSchedules[tid][slotId];
-            }
-          }
-        });
-      });
-    };
-
-    if (effectiveMode === 'all') {
-      clearSchedulesForMode();
-    }
-
-    const requirements: {
-      id: string;
-      turmaId: string;
-      subjectId: string;
-      teacherId: string;
-      isLab: boolean;
-      allowedRooms: string[];
-      shift: 'manha' | 'tarde' | 'noite';
-    }[] = [];
-
-    activeTurmas.forEach(T => {
-      const classShift: 'manha' | 'tarde' | 'noite' = getTurmaShift(T);
-
-      subjects.forEach(S => {
-        const { classWorkload, labWorkload } = getSubjectWorkloadsForTurma(S, T.id);
-        if (classWorkload === 0 && labWorkload === 0) return;
-
-        const eligible = getEligibleTeachers(S.id, T.id, teachers);
-        if (eligible.length === 0) {
-          errors.push(`Nenhum professor cadastrado leciona a matéria "${S.name}" para a turma "${T.name}"`);
-          return;
-        }
-
-        let assignedTeacher = eligible[0];
-        const originalScheduleOfTurma = schedules[T.id] || {};
-        const existingSlot = (Object.values(originalScheduleOfTurma) as ScheduleSlot[]).find(slot => slot?.subjectId === S.id);
-        if (existingSlot) {
-          assignedTeacher = eligible.find(t => t.id === existingSlot.teacherId) || eligible[0];
-        } else {
-          let bestTeacher = eligible[0];
-          let minWorkload = Infinity;
-          eligible.forEach(tea => {
-            let count = 0;
-            activeTurmas.forEach(otherTurma => {
-              (Object.values(schedules[otherTurma.id] || {}) as ScheduleSlot[]).forEach(slot => {
-                if (slot?.teacherId === tea.id) count++;
-              });
-            });
-            if (count < minWorkload) {
-              minWorkload = count;
-              bestTeacher = tea;
-            }
-          });
-          assignedTeacher = bestTeacher;
-        }
-
-        let cWorkloadToAlloc = effectiveShift === 'labs' ? 0 : classWorkload;
-        let lWorkloadToAlloc = labWorkload;
-
-        if (effectiveMode === 'empty') {
-          const classUsage = Object.values(newSchedules[T.id] || {}).filter(slot => 
-            slot.subjectId === S.id
-          ).length;
-          cWorkloadToAlloc = Math.max(0, cWorkloadToAlloc - classUsage);
-
-          let labUsage = 0;
-          specialRooms.forEach(room => {
-            labUsage += Object.values(newSchedules[room.id] || {}).filter(slot => 
-              slot.subjectId === S.id && slot.associatedTurmaId === T.id
-            ).length;
-          });
-          lWorkloadToAlloc = Math.max(0, labWorkload - labUsage);
-        }
-
-        for (let u = 0; u < cWorkloadToAlloc; u++) {
-          requirements.push({
-            id: `${T.id}-${S.id}-${assignedTeacher.id}-class-${u}`,
-            turmaId: T.id,
-            subjectId: S.id,
-            teacherId: assignedTeacher.id,
-            isLab: false,
-            allowedRooms: [],
-            shift: classShift
-          });
-        }
-
-        if (lWorkloadToAlloc > 0) {
-          const allowedRooms = getCompatibleSpecialRooms(S, specialRooms);
-          if (allowedRooms.length === 0) {
-            errors.push(`A matéria "${S.name}" exige laboratório para a turma "${T.name}", mas nenhuma das salas especiais possui essa matéria associada.`);
-            return;
-          }
-          for (let u = 0; u < lWorkloadToAlloc; u++) {
-            requirements.push({
-              id: `${T.id}-${S.id}-${assignedTeacher.id}-lab-${u}`,
-              turmaId: T.id,
-              subjectId: S.id,
-              teacherId: assignedTeacher.id,
-              isLab: true,
-              allowedRooms,
-              shift: classShift
-            });
-          }
-        }
-      });
-    });
-
-    const groups: LessonGroup[] = [];
-    const keyMap = new Map<string, typeof requirements>();
-    requirements.forEach(req => {
-      const key = `${req.turmaId}_${req.subjectId}_${req.teacherId}_${req.isLab}`;
-      if (!keyMap.has(key)) keyMap.set(key, []);
-      keyMap.get(key)!.push(req);
-    });
-
-    keyMap.forEach((reqs, key) => {
-      const first = reqs[0];
-      const teacherObj = teachers.find(t => t.id === first.teacherId);
-      const subjectObj = subjects.find(s => s.id === first.subjectId);
-      const wantsDouble = disableDoubleClassesGlobally ? false : (teacherObj?.preferDoubleClasses || subjectObj?.preferDoubleClasses || false);
-      
-      let count = reqs.length;
-      let idx = 0;
-      
-      if (wantsDouble) {
-        while (count >= 2) {
-          groups.push({
-            id: `${key}-group2-${idx}`,
-            turmaId: first.turmaId,
-            subjectId: first.subjectId,
-            teacherId: first.teacherId,
-            isLab: first.isLab,
-            allowedRooms: first.allowedRooms,
-            shift: first.shift,
-            size: 2
-          });
-          count -= 2;
-          idx++;
-        }
-      }
-      
-      while (count >= 1) {
-        groups.push({
-          id: `${key}-group1-${idx}`,
-          turmaId: first.turmaId,
-          subjectId: first.subjectId,
-          teacherId: first.teacherId,
-          isLab: first.isLab,
-          allowedRooms: first.allowedRooms,
-          shift: first.shift,
-          size: 1
-        });
-        count -= 1;
-        idx++;
-      }
-    });
-
-    const getGroupPriority = (g: LessonGroup) => {
-      const teacher = teachers.find(t => t.id === g.teacherId);
-      const shiftPeriods = g.shift === 'noite' ? PERIODS_NOITE : g.shift === 'tarde' ? PERIODS_TARDE : PERIODS_MANHA;
-      
-      let availableSlots = 0;
-      DAYS.forEach(day => {
-        shiftPeriods.forEach(p => {
-          const slotId = `${day.id}-${p}`;
-          const isLegacyAvailable = !teacher?.availability || teacher.availability.length === 0 || teacher.availability.includes(slotId);
-          const isUnavailable = teacher?.unavailability?.includes(slotId);
-          if (isLegacyAvailable && !isUnavailable) {
-            availableSlots++;
-          }
-        });
-      });
-      
-      let score = 100 - availableSlots;
-      if (g.isLab) {
-        score += (20 - g.allowedRooms.length * 5);
-      }
-      if (g.size === 2) {
-        score += 50;
-      }
-      return score;
-    };
-
-    const sortedGroups = [...groups].sort((a, b) => {
-      const diff = getGroupPriority(b) - getGroupPriority(a);
-      if (diff === 0) return Math.random() - 0.5;
-      return diff;
-    });
-
-    const getTurmaTeacherInSlot = (turmaId: string, d: string, pr: number, currentSchedules: AllSchedules): string | null => {
-      const slotId = `${d}-${pr}`;
-      const s = currentSchedules[turmaId]?.[slotId];
-      if (s && s.teacherId) return s.teacherId;
-      for (const tid in currentSchedules) {
-        const room = turmas.find(t => t.id === tid);
-        if (room && room.isRoom) {
-          const roomSlot = currentSchedules[tid]?.[slotId];
-          if (roomSlot && roomSlot.associatedTurmaId === turmaId && roomSlot.teacherId) {
-            return roomSlot.teacherId;
-          }
-        }
-      }
-      return null;
-    };
-
-    const canPlacePeriod = (
-      g: LessonGroup,
-      day: string,
-      p: number,
-      roomId: string,
-      currentSchedules: AllSchedules
-    ) => {
-      const slotId = `${day}-${p}`;
-      
-      const targetTurma = turmas.find(t => t.id === g.turmaId);
-      if (targetTurma && targetTurma.dailyClassCount === 5) {
-        if (g.shift === 'manha' && p === 6) return false;
-        if (g.shift === 'tarde' && p === 12) return false;
-        if (g.shift === 'noite' && p === 18 && !enableNoiteAsynchronous) return false;
-      }
-      
-      const teacher = teachers.find(t => t.id === g.teacherId);
-      if (teacher?.unavailability?.includes(slotId)) return false;
-      if (teacher?.availability && teacher.availability.length > 0) {
-        if (!teacher.availability.includes(slotId)) return false;
-      }
-      
-      // Se o professor exigir intervalo entre turnos, impede consecutivas na transição de turnos
-      if (teacher && teacher.requireShiftInterval) {
-        if (p === 6) {
-          const nextSlotId = `${day}-7`;
-          const hasNextClass = Object.keys(currentSchedules).some(tid => currentSchedules[tid]?.[nextSlotId]?.teacherId === g.teacherId);
-          if (hasNextClass) return false;
-        } else if (p === 7) {
-          const prevSlotId = `${day}-6`;
-          const hasPrevClass = Object.keys(currentSchedules).some(tid => currentSchedules[tid]?.[prevSlotId]?.teacherId === g.teacherId);
-          if (hasPrevClass) return false;
-        } else if (p === 12) {
-          const nextSlotId = `${day}-13`;
-          const hasNextClass = Object.keys(currentSchedules).some(tid => currentSchedules[tid]?.[nextSlotId]?.teacherId === g.teacherId);
-          if (hasNextClass) return false;
-        } else if (p === 13) {
-          const prevSlotId = `${day}-12`;
-          const hasPrevClass = Object.keys(currentSchedules).some(tid => currentSchedules[tid]?.[prevSlotId]?.teacherId === g.teacherId);
-          if (hasPrevClass) return false;
-        }
-      }
-      
-      // Se o professor/disciplina não for configurado ou se as aulas geminadas estiverem desativadas, regula a distribuição por dia na mesma turma
-      const gSubjectObj = subjects.find(s => s.id === g.subjectId);
-      const wantsDouble = !disableDoubleClassesGlobally && (teacher?.preferDoubleClasses || gSubjectObj?.preferDoubleClasses);
-      if (!wantsDouble) {
-        // 1. Proibição absoluta de consecutividade imediata (aulas vizinhas do mesmo professor nesta turma)
-        const prevTeacher = getTurmaTeacherInSlot(g.turmaId, day, p - 1, currentSchedules);
-        const nextTeacher = getTurmaTeacherInSlot(g.turmaId, day, p + 1, currentSchedules);
-        if (prevTeacher === g.teacherId || nextTeacher === g.teacherId) {
-          return false;
-        }
-
-        // 2. Tentar evitar mais de 1 aula por dia do mesmo professor nesta turma se a carga horária for pequena (<= 5)
-        const subjectObj = subjects.find(s => s.id === g.subjectId);
-        const subjectWorkload = subjectObj ? getSubjectWorkloadsForTurma(subjectObj, g.turmaId).workload : 0;
-        if (subjectWorkload <= 5) {
-          let hasClassOnDay = false;
-          const startP = g.shift === 'noite' ? 13 : g.shift === 'tarde' ? 7 : 1;
-          const endP = g.shift === 'noite' ? 17 : g.shift === 'tarde' ? 12 : 6;
-          for (let otherP = startP; otherP <= endP; otherP++) {
-            if (otherP === p) continue;
-            const slot = currentSchedules[g.turmaId]?.[`${day}-${otherP}`];
-            if (slot?.subjectId === g.subjectId) {
-              hasClassOnDay = true;
-              break;
-            }
-          }
-          if (hasClassOnDay) {
-            return false;
-          }
-        }
-      }
-      
-      for (const tid in currentSchedules) {
-        const slot = currentSchedules[tid]?.[slotId];
-        if (slot && slot.teacherId === g.teacherId) {
-          return false;
-        }
-      }
-      
-      const existingSlot = currentSchedules[g.turmaId]?.[slotId];
-      if (existingSlot && (existingSlot.teacherId !== "" || existingSlot.subjectId !== "")) {
-        return false;
-      }
-      for (const tid in currentSchedules) {
-        const room = turmas.find(t => t.id === tid);
-        if (room?.isRoom) {
-          const rSlot = currentSchedules[tid]?.[slotId];
-          if (rSlot?.associatedTurmaId === g.turmaId && (rSlot.teacherId !== "" || rSlot.subjectId !== "")) {
-            return false;
-          }
-        }
-      }
-      
-      if (g.isLab) {
-        const existingRoomSlot = currentSchedules[roomId]?.[slotId];
-        if (existingRoomSlot && (existingRoomSlot.teacherId !== "" || existingRoomSlot.subjectId !== "")) {
-          // Verify if it's already assigned to our exact requirement (usually false)
-          return false;
-        }
-      }
-      
-      return true;
-    };
-
-    const getPossiblePlacementsForGroup = (g: LessonGroup) => {
-      const list: { day: string; periods: number[] }[] = [];
-      const pList = g.shift === 'noite' ? PERIODS_NOITE : g.shift === 'tarde' ? PERIODS_TARDE : PERIODS_MANHA;
-      const teacher = teachers.find(t => t.id === g.teacherId);
-      const hasAvailability = teacher?.availability && teacher.availability.length > 0;
-      
-      DAYS.forEach(day => {
-        if (g.size === 1) {
-          pList.forEach(p => {
-            const slotId = `${day.id}-${p}`;
-            const isLegacyAvail = !hasAvailability || teacher?.availability?.includes(slotId);
-            const isUnavail = teacher?.unavailability?.includes(slotId);
-            if (isLegacyAvail && !isUnavail) {
-              list.push({ day: day.id, periods: [p] });
-            }
-          });
-        } else if (g.size === 2) {
-          let pairs: number[][] = [];
-          if (g.shift === 'noite') {
-            pairs = [[13, 14], [14, 15], [15, 16], [16, 17]];
-          } else if (g.shift === 'tarde') {
-            pairs = [[7, 8], [8, 9], [9, 10], [10, 11], [11, 12]];
-          } else {
-            pairs = [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]];
-          }
-          
-          pairs.forEach(pair => {
-            const slot1 = `${day.id}-${pair[0]}`;
-            const slot2 = `${day.id}-${pair[1]}`;
-            const isLegacyAvail = !hasAvailability || (teacher?.availability?.includes(slot1) && teacher?.availability?.includes(slot2));
-            const isUnavail = teacher?.unavailability?.includes(slot1) || teacher?.unavailability?.includes(slot2);
-            if (isLegacyAvail && !isUnavail) {
-              list.push({ day: day.id, periods: pair });
-            }
-          });
-        }
-      });
-      return list;
-    };
-
-    let steps = 0;
-    const maxSteps = 20000;
-
-    const solve = async (groupIndex: number): Promise<boolean> => {
-      steps++;
-      if (steps > maxSteps) return false;
-      if (steps % 5000 === 0) {
-        await new Promise(r => setTimeout(r, 0));
-      }
-      if (groupIndex >= sortedGroups.length) return true;
-      
-      const g = sortedGroups[groupIndex];
-      const placements = getPossiblePlacementsForGroup(g);
-      
-      for (let i = placements.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [placements[i], placements[j]] = [placements[j], placements[i]];
-      }
-      
-      const roomsToTry = g.isLab ? g.allowedRooms : [g.turmaId];
-      
-      for (const placement of placements) {
-        for (const rid of roomsToTry) {
-          let ok = true;
-          for (const p of placement.periods) {
-            if (!canPlacePeriod(g, placement.day, p, rid, newSchedules)) {
-              ok = false;
-              break;
-            }
-          }
-          
-          if (ok) {
-            placement.periods.forEach(p => {
-              const slotId = `${placement.day}-${p}`;
-              if (!newSchedules[rid]) newSchedules[rid] = {};
-              newSchedules[rid][slotId] = {
-                teacherId: g.teacherId,
-                subjectId: g.subjectId,
-                associatedTurmaId: g.isLab ? g.turmaId : undefined
-              };
-              if (g.isLab) {
-                if (!newSchedules[g.turmaId]) newSchedules[g.turmaId] = {};
-                newSchedules[g.turmaId][slotId] = {
-                  teacherId: g.teacherId,
-                  subjectId: g.subjectId,
-                  associatedRoomId: rid
-                };
-              }
-            });
-            
-            if (await solve(groupIndex + 1)) {
-              return true;
-            }
-            
-            placement.periods.forEach(p => {
-              const slotId = `${placement.day}-${p}`;
-              delete newSchedules[rid][slotId];
-              if (g.isLab && newSchedules[g.turmaId]) {
-                delete newSchedules[g.turmaId][slotId];
-              }
-            });
-          }
-        }
-      }
-      
-      return false;
-    };
-
-    const calculateTeacherPenalty = (scheds: AllSchedules) => {
-      let penalty = 0;
-      teachers.forEach(teacher => {
-        // Evaluate for each day and shift
-        DAYS.forEach(day => {
-          [PERIODS_MANHA, PERIODS_TARDE, PERIODS_NOITE].forEach(shiftPeriods => {
-            let firstClassIdx = -1;
-            let lastClassIdx = -1;
-            let count = 0;
-            
-            shiftPeriods.forEach((p, idx) => {
-              const slotId = `${day.id}-${p}`;
-              let hasClass = false;
-              for (const tid in scheds) {
-                if (scheds[tid]?.[slotId]?.teacherId === teacher.id) {
-                  hasClass = true;
-                  break;
-                }
-              }
-              if (hasClass) {
-                if (firstClassIdx === -1) firstClassIdx = idx;
-                lastClassIdx = idx;
-                count++;
-              }
-            });
-            
-            if (count > 0 && lastClassIdx > firstClassIdx) {
-              const span = lastClassIdx - firstClassIdx + 1;
-              const gaps = span - count;
-              if (gaps > 0) {
-                penalty += gaps * 10; // 10 points penalty per gap (janela)
-              }
-              if (firstClassIdx === 0 && lastClassIdx === shiftPeriods.length - 1 && gaps > 2) {
-                penalty += 50; // extra penalty for heavy gaps between extremes
-              }
-            }
-          });
-        });
-      });
-      return penalty;
-    };
-
-    let solved = false;
-    let attempt = 0;
-    let bestGenerated: AllSchedules | null = null;
-    let bestPenalty = Infinity;
-    let minFailures = Infinity;
-    let bestPending: typeof pendingLessons = [];
-
-    // Try full backtracking max 2 times
-    while (!solved && attempt < 2) {
-      attempt++;
-      Object.keys(newSchedules).forEach(tid => {
-        newSchedules[tid] = { ...(schedules[tid] || {}) };
-      });
-      if (effectiveMode === 'all') {
-        clearSchedulesForMode();
-      }
-      steps = 0;
-      solved = await solve(0);
-      if (solved) {
-        bestGenerated = JSON.parse(JSON.stringify(newSchedules));
-        bestPenalty = calculateTeacherPenalty(newSchedules);
-        minFailures = 0;
-        break;
-      }
-    }
-
-    if (!solved) {
-      // Greedy multi-start to find lowest failures and best penalty
-      for (let iter = 0; iter < 40; iter++) {
-        let tempSchedules: AllSchedules = {};
-        Object.keys(schedules).forEach(tid => {
-          tempSchedules[tid] = { ...(schedules[tid] || {}) };
-        });
-        if (effectiveMode === 'all') {
-            Object.keys(tempSchedules).forEach(tid => {
-              const isRoom = turmas.find(t => t.id === tid)?.isRoom;
-              if (overrideTurmaId && !isRoom && (Array.isArray(overrideTurmaId) ? !overrideTurmaId.includes(tid) : tid !== overrideTurmaId)) return;
-              Object.keys(tempSchedules[tid]).forEach(slotId => {
-                const [_, pStr] = slotId.split('-');
-                const p = parseInt(pStr);
-                if (overrideTurmaId && isRoom) {
-                  const associatedId = tempSchedules[tid][slotId]?.associatedTurmaId;
-                  if (associatedId && (Array.isArray(overrideTurmaId) ? !overrideTurmaId.includes(associatedId) : associatedId !== overrideTurmaId)) return;
-                }
-                if (effectiveShift === 'labs') {
-                  if (isRoom) delete tempSchedules[tid][slotId];
-                } else {
-                  if (targetPeriods.has(p)) delete tempSchedules[tid][slotId];
-                }
-              });
-            });
-        }
-
-        let failsIter = 0;
-        let pendingIter: typeof pendingLessons = [];
-
-        sortedGroups.forEach(g => {
-          const placements = getPossiblePlacementsForGroup(g);
-          for (let i = placements.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [placements[i], placements[j]] = [placements[j], placements[i]];
-          }
-          const roomsToTry = g.isLab ? g.allowedRooms : [g.turmaId];
-          let placed = false;
-          for (const placement of placements) {
-            for (const rid of roomsToTry) {
-              let ok = true;
-              for (const p of placement.periods) {
-                if (!canPlacePeriod(g, placement.day, p, rid, tempSchedules)) {
-                  ok = false;
-                  break;
-                }
-              }
-              if (ok) {
-                placement.periods.forEach(p => {
-                  const slotId = `${placement.day}-${p}`;
-                  if (!tempSchedules[rid]) tempSchedules[rid] = {};
-                  tempSchedules[rid][slotId] = {
-                    teacherId: g.teacherId,
-                    subjectId: g.subjectId,
-                    associatedTurmaId: g.isLab ? g.turmaId : undefined
-                  };
-                  if (g.isLab) {
-                    if (!tempSchedules[g.turmaId]) tempSchedules[g.turmaId] = {};
-                    tempSchedules[g.turmaId][slotId] = {
-                      teacherId: g.teacherId,
-                      subjectId: g.subjectId,
-                      associatedRoomId: rid
-                    };
-                  }
-                });
-                placed = true;
-                break;
-              }
-            }
-            if (placed) break;
-          }
-          if (!placed) {
-            failsIter += g.size;
-            pendingIter.push({
-              turmaName: turmas.find(t => t.id === g.turmaId)?.name || 'Vazia',
-              subjectName: subjects.find(s => s.id === g.subjectId)?.name || 'Desconhecida',
-              teacherName: teachers.find(t => t.id === g.teacherId)?.name || 'Desconhecido',
-              reason: `${g.size} aula(s): ` + (g.isLab ? 'Espaço indisponível.' : 'Conflito.'),
-              turmaId: g.turmaId,
-              subjectId: g.subjectId,
-              teacherId: g.teacherId,
-              isDouble: g.size > 1
-            });
-          }
-        });
-
-        const pen = calculateTeacherPenalty(tempSchedules);
-        
-        // Pick the best based on fewest failures, then lowest penalty
-        if (failsIter < minFailures || (failsIter === minFailures && pen < bestPenalty)) {
-          minFailures = failsIter;
-          bestPenalty = pen;
-          bestGenerated = tempSchedules;
-          bestPending = pendingIter;
-        }
-      }
-    }
-
-    const failedLessonsCount = minFailures;
-    pendingLessons.push(...bestPending);
-    
-    if (bestGenerated) {
-       Object.keys(bestGenerated).forEach(tid => {
-         newSchedules[tid] = bestGenerated![tid];
-       });
-    }
-
-    if (autoGenForceConflicts && pendingLessons.length > 0) {
-      for (const pending of pendingLessons) {
-        const { turmaId, subjectId, teacherId, isDouble } = pending;
-        const turma = turmas.find(t => t.id === turmaId);
-        if (!turma) continue;
-
-        let shiftPeriods: number[] = [];
-        if (turma.shift === 'noite') shiftPeriods = PERIODS_NOITE;
-        else if (turma.shift === 'tarde') shiftPeriods = PERIODS_TARDE;
-        else shiftPeriods = PERIODS_MANHA; // manha or todas/any
-
-        let slotsNeeded = isDouble ? 2 : 1;
-        
-        for (const day of DAYS) {
-          if (slotsNeeded <= 0) break;
-          for (let i = 0; i < shiftPeriods.length; i++) {
-            const p = shiftPeriods[i];
-            
-            // Re-check constraints so we don't pick impossible slots for 5-class shifts
-            if (turma.dailyClassCount === 5) {
-              if (turma.shift === 'manha' && p === 6) continue;
-              if (turma.shift === 'tarde' && p === 12) continue;
-              if (turma.shift === 'noite' && p === 18 && !enableNoiteAsynchronous) continue;
-            }
-
-            const slotId = `${day.id}-${p}`;
-            if (!newSchedules[turmaId]) newSchedules[turmaId] = {};
-            
-            const existing = newSchedules[turmaId][slotId];
-            if (!existing || (!existing.teacherId && !existing.subjectId)) {
-                // Free slot found in this class!
-              if (slotsNeeded > 0) {
-                 newSchedules[turmaId][slotId] = { subjectId, teacherId };
-                 slotsNeeded--;
-                 if (slotsNeeded <= 0) break;
-              }
-            }
-          }
-        }
-      }
-      
-      // Since we forced them, clear the pending ones and mark solved
-      pendingLessons.length = 0;
-      solved = true;
-    }
-
-    setSchedules(newSchedules);
-
-    setAutoGenResults({
-      solved,
-      scannedCount: requirements.length,
-      placedCount: autoGenForceConflicts ? requirements.length : (requirements.length - failedLessonsCount),
-      pending: pendingLessons,
-      errors
-    });
-      
-      setIsAutoGenerateModalOpen(false);
-      setIsAutoGenerateResultsModalOpen(true);
-      setIsAutoGenerateResultsMinimized(false);
-    } catch (err: any) {
-      console.error("Erro na geração automática de horários:", err);
-      alert("Houve um problema durante o cálculo automático da grade de aulas: " + err.message);
-    } finally {
-      setIsGenerating(false);
-      setIsLoading(false);
-    }
+    setIsGenerating(false);
+    setIsLoading(false);
+    setIsSaved(false);
   };
-
 
   const handleSave = async () => {
     localStorage.setItem('cecm_teachers', JSON.stringify(teachers));
@@ -3307,7 +3377,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
       // Desafio 1: Automatizar a inserção da Matriz Curricular (SEED-PR 2026) dependendo do perfil da escola e nível da turma
       const isCCM = isCivicoMilitar;
-      const isEF = /6[º°oaA]|7[º°oaA]|8[º°oaA]|9[º°oaA]/.test(formattedName);
+      const isEF = /(?:^|\\D)(?:6|7|8|9)(?:\\D|$)|(?:sexto|sétimo|oitavo|nono)|fundamental/i.test(formattedName);
       
       const targetWorkloads: Record<string, number> = {};
 
@@ -3320,9 +3390,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
           });
         } else {
           Object.assign(targetWorkloads, {
-            'sub-port': 5, 'sub-mat': 5, 'sub-cien': 4, 'sub-his': 3, 'sub-geo': 3,
-            'sub-ing': 2, 'sub-art': 2, 'sub-ef': 2, 'sub-ensr': 1,
-            'sub-edfin': 1, 'sub-eddigc': 1, 'sub-pvida': 1
+            'sub-port': 4, 'sub-mat': 4, 'sub-cien': 3, 'sub-his': 3, 'sub-geo': 3,
+            'sub-robot': 2, 'sub-ef': 2, 'sub-ing': 2, 'sub-art': 2, 'sub-cid': 2,
+            'sub-edfin': 2, 'sub-ensr': 1
           });
         }
       } else {
@@ -3336,9 +3406,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         } else {
           Object.assign(targetWorkloads, {
             'sub-port': 4, 'sub-mat': 4, 'sub-bio': 2, 'sub-fis': 2, 'sub-quim': 2,
-            'sub-his': 2, 'sub-geo': 2, 'sub-ing': 2, 'sub-art': 1, 'sub-ef': 1,
-            'sub-fil': 1, 'sub-soc': 1,
-            'sub-edfin': 2, 'sub-eddigc': 2, 'sub-pvida': 2
+            'sub-his': 2, 'sub-geo': 2, 'sub-eddigc': 2, 'sub-edfin': 0,
+            'sub-ing': 2, 'sub-ef': 2, 'sub-art': 1, 'sub-fil': 1, 'sub-soc': 1,
+            'sub-pvida': 1, 'sub-cid': 2
           });
         }
       }
@@ -4920,7 +4990,14 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     const generateScheduleTable = (shiftTurmas: Turma[], shift: 'manha' | 'tarde' | 'noite') => {
       if (shiftTurmas.length === 0) return '';
       
-      const currentPeriods = shift === 'noite' ? PERIODS_NOITE : shift === 'manha' ? PERIODS_MANHA : PERIODS_TARDE;
+      const maxDailyClasses = shiftTurmas.length > 0 ? Math.max(5, ...shiftTurmas.map(t => t.dailyClassCount === 5 ? 5 : 6)) : 6;
+      let currentPeriods = shift === 'noite' ? PERIODS_NOITE : shift === 'manha' ? PERIODS_MANHA : PERIODS_TARDE;
+      if (shift === 'noite' && enableNoiteAsynchronous) {
+        currentPeriods = currentPeriods.slice(0, 5);
+      } else {
+        currentPeriods = currentPeriods.slice(0, maxDailyClasses);
+      }
+      
       const currentTimeRanges = shift === 'noite' ? timeRangesNoite : shift === 'manha' ? timeRangesManha : timeRangesTarde;
 
       return `
@@ -4985,7 +5062,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
                            return `
                              <td class="slot-cell" style="${isPeriodOut ? 'background-color: #f1f5f9 !important;' : ''}">
-                               ${isPeriodOut ? '<div style="font-size: 5pt; color: #94a3b8; font-weight: 700; text-align: center; max-width: 100%; white-space: normal;">Turma não possui 6ª Aula</div>' : `
+                               ${isPeriodOut ? '<div style="font-size: 5pt; color: #94a3b8; font-weight: 800; text-transform: uppercase; text-align: center; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0px;">SEM 6ª AULA</div>' : `
                                  ${subject ? `<div class="subj-name">${formatSubjectName(subject.name, 16)}</div>` : ''}
                                  ${teacher ? `<div class="prof-name">
                                    ${actSub ? `${subTeacher ? formatTeacherName(subTeacher.name) : 'PENDENTE'} <span style="display:inline-block;padding:1px;background:#f1f5f9;color:#334155;border-radius:2px;font-size:4pt;font-weight:800;border:1px solid #cbd5e1;vertical-align:top;">SUB</span>` : formatTeacherName(teacher.name)}
@@ -5546,7 +5623,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       return;
     }
 
-    const schoolNameText = schoolName || "CE LUCAS LENIAR EF.M.P.";
+    const schoolNameText = schoolName || "CE LUCAS LENIAR";
     const dateStr = new Date().toLocaleString('pt-BR');
     const rateSuccess = Math.round((autoGenResults.placedCount / (autoGenResults.scannedCount || 1)) * 100);
 
@@ -5656,10 +5733,11 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
         const turma = turmas.find(t => t.id === turmaId);
         if (!turma) continue;
 
+        const classShift = getTurmaShift(turma);
         let shiftPeriods: number[] = [];
-        if (turma.shift === 'noite') shiftPeriods = PERIODS_NOITE;
-        else if (turma.shift === 'tarde') shiftPeriods = PERIODS_TARDE;
-        else shiftPeriods = PERIODS_MANHA; // manha or todas/any
+        if (classShift === 'noite') shiftPeriods = PERIODS_NOITE;
+        else if (classShift === 'tarde') shiftPeriods = PERIODS_TARDE;
+        else shiftPeriods = PERIODS_MANHA;
 
         let slotsNeeded = isDouble ? 2 : 1;
         
@@ -5668,11 +5746,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
           for (let i = 0; i < shiftPeriods.length; i++) {
             const p = shiftPeriods[i];
             
-            // Re-check constraints so we don't pick impossible slots for 5-class shifts
             if (turma.dailyClassCount === 5) {
-              if (turma.shift === 'manha' && p === 6) continue;
-              if (turma.shift === 'tarde' && p === 12) continue;
-              if (turma.shift === 'noite' && p === 18 && !enableNoiteAsynchronous) continue;
+              if (classShift === 'manha' && p === 6) continue;
+              if (classShift === 'tarde' && p === 12) continue;
+              if (classShift === 'noite' && p === 18 && !enableNoiteAsynchronous) continue;
             }
 
             const slotId = `${day.id}-${p}`;
@@ -5680,7 +5757,29 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             
             const existing = next[turmaId][slotId];
             if (!existing || (!existing.teacherId && !existing.subjectId)) {
-                // Free slot found in this class!
+              if (slotsNeeded > 0) {
+                 next[turmaId][slotId] = { subjectId, teacherId };
+                 slotsNeeded--;
+                 if (slotsNeeded <= 0) break;
+              }
+            }
+          }
+        }
+        
+        // Second pass: if STILL slots needed (Turma is completely full), force overwrite FIRST available slots
+        if (slotsNeeded > 0) {
+          for (const day of DAYS) {
+            if (slotsNeeded <= 0) break;
+            for (let i = 0; i < shiftPeriods.length; i++) {
+              const p = shiftPeriods[i];
+              if (turma.dailyClassCount === 5) {
+                if (classShift === 'manha' && p === 6) continue;
+                if (classShift === 'tarde' && p === 12) continue;
+                if (classShift === 'noite' && p === 18 && !enableNoiteAsynchronous) continue;
+              }
+              const slotId = `${day.id}-${p}`;
+              if (!next[turmaId]) next[turmaId] = {};
+              
               if (slotsNeeded > 0) {
                  next[turmaId][slotId] = { subjectId, teacherId };
                  slotsNeeded--;
@@ -5807,7 +5906,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     // Sorting items by Class name first, then subject
     pendingItems.sort((a,b) => a.turma.localeCompare(b.turma, undefined, {numeric: true}) || a.subject.localeCompare(b.subject));
 
-    const schoolNameText = schoolName || "CE LUCAS LENIAR EF.M.P.";
+    const schoolNameText = schoolName || "CE LUCAS LENIAR";
     const dateStr = new Date().toLocaleString('pt-BR');
     const academicStr = `Período: ${academicPeriod}º ${academicSystem} ${academicStartDate ? `(${academicStartDate} a ${academicEndDate})` : ''}`;
 
@@ -6233,6 +6332,16 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   <BarChart2 className="w-3 h-3 text-amber-600 shrink-0" />
                   Visão Geral & Gráficos
                 </button>
+                <button 
+                  onClick={() => {
+                    setShowOnlyConflicts(!showOnlyConflicts);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-1.5 p-1.5 rounded-md text-[9px] font-bold uppercase tracking-wide transition shadow-xxs cursor-pointer ${showOnlyConflicts ? "bg-red-600 text-white hover:bg-red-700" : "bg-red-50 border border-red-200 text-red-700 hover:bg-red-100/80"}`}
+                >
+                  <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+                  {showOnlyConflicts ? "Ocultar Filtro Conflitos" : "Filtrar Conflitos"}
+                </button>
               </div>
             </div>
 
@@ -6354,8 +6463,16 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   </button>
                   <label className="p-1 px-2 bg-white hover:bg-slate-50 rounded-md text-slate-700 hover:text-indigo-650 border border-slate-200 active:border-slate-400 flex items-center gap-1 font-extrabold text-[9px] uppercase tracking-tighter cursor-pointer">
                     <FileText className="w-3 h-3 shrink-0" /> Importar
-                    <input type="file" accept=".txt" className="hidden" onChange={handleImportBackup} />
+                    <input type="file" accept=".txt,.json" className="hidden" onChange={handleImportBackup} />
                   </label>
+                  <a 
+                    href="/backup_corrigido.json" 
+                    download="backup_corrigido.json"
+                    className="p-1 px-2 bg-emerald-100 hover:bg-emerald-200 rounded-md text-emerald-800 border border-emerald-300 active:border-emerald-400 flex items-center gap-1 font-extrabold text-[9px] uppercase tracking-tighter"
+                    title="Baixar backup automático com as matrizes curriculares corrigidas"
+                  >
+                    <Download className="w-3 h-3 shrink-0" /> Baixar Backup Corrigido
+                  </a>
                 </div>
               </div>
 
@@ -6512,7 +6629,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
-                        const val = tempSchoolName.trim() || 'CE LUCAS LENIAR EF.M.P.';
+                        const val = tempSchoolName.trim() || 'CE LUCAS LENIAR';
                         setSchoolName(val);
                         window.dispatchEvent(new CustomEvent('cecm_school_name_changed', { detail: val }));
                         setShowSchoolInput(false);
@@ -6526,7 +6643,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   <div className="flex items-center gap-0.5 ml-1">
                     <button 
                       onClick={() => { 
-                        const val = tempSchoolName.trim() || 'CE LUCAS LENIAR EF.M.P.';
+                        const val = tempSchoolName.trim() || 'CE LUCAS LENIAR';
                         setSchoolName(val);
                         window.dispatchEvent(new CustomEvent('cecm_school_name_changed', { detail: val }));
                         setShowSchoolInput(false); 
@@ -6860,6 +6977,13 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             </div>
             
             <div className="flex-1 overflow-auto custom-scrollbar">
+              {(() => {
+                const gridTurmas = viewMode === 'turmas' ? displayedTurmas : turmas.filter(t => t.isRoom);
+                const maxDailyClasses = gridTurmas.length > 0 ? Math.max(5, ...gridTurmas.map(t => t.dailyClassCount === 5 ? 5 : 6)) : 6;
+                const basePeriods = importShift === 'noite' ? PERIODS_NOITE : importShift === 'manha' ? PERIODS_MANHA : PERIODS_TARDE;
+                const visiblePeriodsList = basePeriods.slice(0, (importShift === 'noite' && enableNoiteAsynchronous) ? 5 : maxDailyClasses);
+                
+                return (
               <table className="border-collapse border-spacing-0 table-fixed w-full">
                 <thead>
                   <tr className="bg-slate-100 border-b border-slate-300 sticky top-0 z-20">
@@ -6901,15 +7025,15 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 <tbody>
                   {DAYS.map((day) => (
                     <React.Fragment key={day.id}>
-                      {(importShift === 'noite' ? PERIODS_NOITE : importShift === 'manha' ? PERIODS_MANHA : PERIODS_TARDE).map((actualPeriod, pIndex) => {
+                      {visiblePeriodsList.map((actualPeriod, pIndex) => {
                         const timeRange = importShift === 'noite'
-                          ? (enableNoiteAsynchronous && pIndex === 5 ? 'ONLINE' : timeRangesNoite[pIndex])
+                          ? (enableNoiteAsynchronous && pIndex === 5 ? 'ONLINE' : timeRangesNoite[actualPeriod - 1])
                           : importShift === 'manha' 
-                            ? timeRangesManha[pIndex]
-                            : timeRangesTarde[pIndex];
+                            ? timeRangesManha[actualPeriod - 1]
+                            : timeRangesTarde[actualPeriod - 7];
 
                         const isGrayDay = day.id === 'ter' || day.id === 'qui';
-                        const currentPeriodsList = importShift === 'noite' ? PERIODS_NOITE : importShift === 'manha' ? PERIODS_MANHA : PERIODS_TARDE;
+                        const currentPeriodsList = visiblePeriodsList;
                         const lastPeriodIdx = currentPeriodsList.length - 1;
                         const totalRows = currentPeriodsList.length + 1;
 
@@ -6938,10 +7062,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                   return (
                                     <td 
                                       key={turma.id}
-                                      className="p-1.5 border-r border-slate-300 bg-slate-100/70 text-center select-none pointer-events-none cursor-not-allowed h-14"
+                                      className="p-1 border-r border-slate-300 bg-slate-100/70 text-center select-none pointer-events-none cursor-not-allowed"
                                     >
-                                      <div className="flex flex-col items-center justify-center h-full w-full">
-                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block leading-none text-center">Turma não possui 6ª Aula</span>
+                                      <div className="flex flex-col items-center justify-center h-full w-full overflow-hidden">
+                                        <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest block leading-none text-center whitespace-nowrap truncate w-full">Sem 6ª Aula</span>
                                       </div>
                                     </td>
                                   );
@@ -7078,6 +7202,24 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                             <AlertCircle className="w-2.5 h-2.5 text-red-500 fill-white" />
                                           </div>
                                         )}
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const newSchedules = { ...schedules };
+                                            if (newSchedules[turma.id] && newSchedules[turma.id][slotId]) {
+                                              newSchedules[turma.id][slotId] = {
+                                                ...newSchedules[turma.id][slotId],
+                                                isFixed: !newSchedules[turma.id][slotId].isFixed
+                                              };
+                                              setSchedules(newSchedules);
+                                              setIsSaved(false);
+                                            }
+                                          }}
+                                          className={`absolute top-0.5 left-0.5 p-0.5 rounded transition-all opacity-0 group-hover:opacity-100 ${slot.isFixed ? 'opacity-100 text-slate-700 bg-slate-200 hover:bg-slate-300' : 'text-slate-300 hover:text-slate-600 hover:bg-slate-100'}`}
+                                          title={slot.isFixed ? "Desbloquear aula (permitir que seja movida na geração automática)" : "Travar aula (impedir que seja movida na geração automática)"}
+                                        >
+                                          <Lock className="w-2.5 h-2.5" />
+                                        </button>
                                       </div>
                                     ) : (
                                       <div className="h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -7119,6 +7261,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   ))}
                 </tbody>
               </table>
+              );
+              })()}
             </div>
             <div className="p-3 bg-slate-50 border-t-2 border-slate-900 text-center flex flex-col items-center gap-0.5">
               <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5">
@@ -8029,7 +8173,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     <button
                       type="button"
                       onClick={() => {
-                        setIsCivicoMilitar(false);
+                        handleModalidadeChange(false);
                       }}
                       className={`flex items-start gap-2.5 p-2 rounded-xl border text-left cursor-pointer transition-all ${
                         !isCivicoMilitar
@@ -8052,7 +8196,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     <button
                       type="button"
                       onClick={() => {
-                        setIsCivicoMilitar(true);
+                        handleModalidadeChange(true);
                       }}
                       className={`flex items-start gap-2.5 p-2 rounded-xl border text-left cursor-pointer transition-all ${
                         isCivicoMilitar
@@ -9850,7 +9994,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
             </div>
 
               {/* Submit Buttons */}
-              <div className="pt-2 border-t border-slate-100 flex gap-2">
+              <div className="pt-2 border-t border-slate-100 flex flex-wrap gap-2">
                 <button 
                   type="button"
                   onClick={() => {
@@ -9868,14 +10012,14 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     setNewSubjectCustomWorkloads({});
                     setShowCustomWorkloads(false);
                   }}
-                  className="flex-1 py-2.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 text-slate-500 font-black uppercase text-[10px] tracking-widest transition-all cursor-pointer"
+                  className="flex-1 min-w-[120px] py-2.5 rounded-xl border-2 border-slate-200 hover:bg-slate-50 text-slate-500 font-black uppercase text-[10px] tracking-widest transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button 
                   onClick={addSubject} 
                   disabled={(newSubjectClassWorkload + newSubjectLabWorkload) > newSubjectWorkload}
-                  className={`flex-[2] py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all cursor-pointer ${((newSubjectClassWorkload + newSubjectLabWorkload) > newSubjectWorkload) ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : (editingSubjectId ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-600/15' : 'bg-slate-900 hover:bg-slate-955 text-white shadow-md shadow-slate-900/15')}`}
+                  className={`flex-[2] min-w-[150px] py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all cursor-pointer ${((newSubjectClassWorkload + newSubjectLabWorkload) > newSubjectWorkload) ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : (editingSubjectId ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-600/15' : 'bg-slate-900 hover:bg-slate-950 text-white shadow-md shadow-slate-900/15')}`}
                 >
                   {editingSubjectId ? 'Salvar Alterações' : 'Cadastrar Disciplina'}
                 </button>
@@ -10263,7 +10407,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
                     // If NO search applied, we calculate missing/expected via grid slots
                     if (!isSearching) {
-                       classExpected = (turma.dailyClassCount || 5) * 5;
+                       classExpected = (turma.dailyClassCount || 6) * 5;
                        classAllocated = 0;
                        if (schedules[turma.id]) {
                           Object.values(schedules[turma.id]).forEach((slot: any) => {
@@ -11019,9 +11163,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                         <button
                           type="button"
                           onClick={() => {
-                            if (window.confirm('Atenção: Isso forçará a entrada das disciplinas na grade mesmo se o professor já estiver em outra turma, gerando choques de horário (linhas vermelhas). Deseja continuar?')) {
                               handleForceAllocatePending();
-                            }
                           }}
                           className="flex items-center gap-1.5 text-[9px] text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-lg cursor-pointer transition-colors border border-amber-200 font-bold"
                         >
@@ -11698,7 +11840,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                               setSchoolName(val);
                               window.dispatchEvent(new CustomEvent('cecm_school_name_changed', { detail: val }));
                             }}
-                            placeholder="Nome do Colégio (Ex: CE LUCAS LENIAR EF.M.P.)"
+                            placeholder="Nome do Colégio (Ex: CE LUCAS LENIAR)"
                             className="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl px-3 py-2.5 outline-none transition-all font-sans"
                           />
                         </div>
@@ -11734,7 +11876,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                           <button
                             type="button"
                             onClick={() => {
-                              setIsCivicoMilitar(false);
+                              handleModalidadeChange(false);
                             }}
                             className={`flex items-start gap-3 p-3 rounded-xl border text-left cursor-pointer transition-all bg-white hover:bg-slate-50/50 ${
                               !isCivicoMilitar
@@ -11759,7 +11901,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                           <button
                             type="button"
                             onClick={() => {
-                              setIsCivicoMilitar(true);
+                              handleModalidadeChange(true);
                             }}
                             className={`flex items-start gap-3 p-3 rounded-xl border text-left cursor-pointer transition-all bg-white hover:bg-slate-50/50 ${
                               isCivicoMilitar
