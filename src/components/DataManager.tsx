@@ -41,6 +41,12 @@ export default function DataManager() {
   const handleExport = () => {
     setIsExporting(true);
     setTimeout(() => {
+      const certKeys = Object.keys(localStorage).filter(k => k.startsWith('preset_template_'));
+      const certificatePresets: Record<string, any> = {};
+      certKeys.forEach(k => {
+        certificatePresets[k] = JSON.parse(localStorage.getItem(k) || 'null');
+      });
+
       const data = {
         teachers: JSON.parse(localStorage.getItem('cecm_teachers') || '[]'),
         subjects: JSON.parse(localStorage.getItem('cecm_subjects') || '[]'),
@@ -48,6 +54,7 @@ export default function DataManager() {
         schedules: JSON.parse(localStorage.getItem('cecm_schedules') || '{}'),
         substitutions: JSON.parse(localStorage.getItem('cecm_substitutions') || '[]'),
         notices: JSON.parse(localStorage.getItem('cecm_notices') || '[]'),
+        certificatePresets: certificatePresets,
         version: localStorage.getItem('cecm_version') || '74',
         logoUrl: localStorage.getItem('cecm_logo_url') || '',
         schoolName: localStorage.getItem('cecm_school_name') || 'CE LUCAS LENIAR EF.M.P.',
@@ -111,6 +118,11 @@ export default function DataManager() {
           if (data.schedules) localStorage.setItem('cecm_schedules', JSON.stringify(data.schedules));
           if (data.substitutions) localStorage.setItem('cecm_substitutions', JSON.stringify(data.substitutions));
           if (data.notices) localStorage.setItem('cecm_notices', JSON.stringify(data.notices));
+          if (data.certificatePresets) {
+            Object.keys(data.certificatePresets).forEach(k => {
+              localStorage.setItem(k, JSON.stringify(data.certificatePresets[k]));
+            });
+          }
           
           if (data.logoUrl !== undefined) localStorage.setItem('cecm_logo_url', data.logoUrl);
           if (data.schoolName !== undefined) localStorage.setItem('cecm_school_name', data.schoolName);

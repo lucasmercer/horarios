@@ -51,6 +51,7 @@ export interface ScheduleSlot {
   subjectId: string;
   associatedTurmaId?: string;
   associatedRoomId?: string;
+  isFixed?: boolean;
 }
 
 export type Schedule = Record<string, ScheduleSlot>; // Key format: "day-period" e.g. "seg-1"

@@ -1269,7 +1269,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
 
   const applyGeminiActions = () => {
     setSchedules(prevSchedules => {
-      const newSchedules = { ...prevSchedules };
+      const newSchedules = JSON.parse(JSON.stringify(prevSchedules));
       let changesApplied = 0;
       
       aiAnalysisActions.forEach(action => {
@@ -2269,12 +2269,20 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       if (savedSubs) substitutions = JSON.parse(savedSubs);
     } catch (e) {}
 
+    const certKeys = Object.keys(localStorage).filter(k => k.startsWith('preset_template_'));
+    const certificatePresets: Record<string, any> = {};
+    certKeys.forEach(k => {
+      certificatePresets[k] = JSON.parse(localStorage.getItem(k) || 'null');
+    });
+
     const data = {
       teachers,
       subjects,
       turmas,
       schedules,
       substitutions, // Added substitutions
+      notices: JSON.parse(localStorage.getItem('cecm_notices') || '[]'),
+      certificatePresets,
       version,
       logoUrl,
       schoolName,
@@ -2518,6 +2526,12 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                   }
                 }
               }
+            }
+
+            if (data.certificatePresets) {
+              Object.keys(data.certificatePresets).forEach(k => {
+                localStorage.setItem(k, JSON.stringify(data.certificatePresets[k]));
+              });
             }
 
             setVersion(74);
@@ -3910,7 +3924,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     }
 
     // Proceed with drop / change schedules
-    const updatedSchedules = { ...schedules };
+    const updatedSchedules = JSON.parse(JSON.stringify(schedules));
     const sourceSlotData = updatedSchedules[sourceTurmaId]?.[sourceSlotId];
     if (!sourceSlotData) return;
     const targetSlotData = updatedSchedules[targetTurmaId]?.[targetSlotId];
@@ -4047,7 +4061,16 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
     try {
       const rawData = e.dataTransfer.getData('text/plain');
       if (!rawData) return;
-      const { sourceTurmaId, sourceSlotId } = JSON.parse(rawData);
+      
+      let parsedData;
+      try {
+        parsedData = JSON.parse(rawData);
+      } catch (err) {
+        // Not a valid JSON payload (likely dragging external text)
+        return;
+      }
+      
+      const { sourceTurmaId, sourceSlotId } = parsedData;
       if (!sourceTurmaId || !sourceSlotId) return;
 
       performMoveOrSwap(sourceTurmaId, sourceSlotId, targetTurmaId, targetSlotId);
@@ -4148,8 +4171,8 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
       return;
     }
 
-    const nextSchedules = { ...schedules };
-    const currentSchedule = { ...(nextSchedules[selectedTurmaId] || {}) };
+    const nextSchedules = JSON.parse(JSON.stringify(schedules));
+    const currentSchedule = nextSchedules[selectedTurmaId] || {};
     
     let activeRoomId = ignoreLab ? '' : tempAssociatedRoomId;
     
@@ -7019,7 +7042,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                 const visiblePeriodsList = basePeriods.slice(0, (importShift === 'noite' && enableNoiteAsynchronous) ? 5 : maxDailyClasses);
                 
                 return (
-              <table className="border-collapse border-spacing-0 table-fixed w-full">
+              <table className="border-collapse border-spacing-0 table-fixed w-full select-none">
                 <thead>
                   <tr className="bg-slate-100 border-b border-slate-300 sticky top-0 z-20">
                     <th className="bg-slate-100 sticky left-0 z-40 border-r border-slate-300 w-10 min-w-[40px] max-w-[40px]"></th>
@@ -7172,7 +7195,7 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                     onDragOver={(e) => handleDragOver(e, turma.id, slotId)}
                                     onDragLeave={handleDragLeave}
                                     onDrop={(e) => handleDrop(e, turma.id, slotId)}
-                                    className={`p-0 px-0.5 border-r border-slate-300 cursor-pointer transition-all group relative ${isDimmed ? 'opacity-30 grayscale-[50%]' : ''} ${
+                                    className={`p-0 px-0.5 border-r border-slate-300 cursor-pointer transition-all group relative select-none ${isDimmed ? 'opacity-30 grayscale-[50%]' : ''} ${
                                       isLoading 
                                         ? 'bg-slate-100'
                                         : draggedOverCell?.turmaId === turma.id && draggedOverCell?.slotId === slotId
@@ -7240,12 +7263,9 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            const newSchedules = { ...schedules };
+                                            const newSchedules = JSON.parse(JSON.stringify(schedules));
                                             if (newSchedules[turma.id] && newSchedules[turma.id][slotId]) {
-                                              newSchedules[turma.id][slotId] = {
-                                                ...newSchedules[turma.id][slotId],
-                                                isFixed: !newSchedules[turma.id][slotId].isFixed
-                                              };
+                                              newSchedules[turma.id][slotId].isFixed = !newSchedules[turma.id][slotId].isFixed;
                                               setSchedules(newSchedules);
                                               setIsSaved(false);
                                             }
@@ -9598,6 +9618,10 @@ Escolha horários (day e period) que estejam listados nos "Horários vazios da t
                     {(() => {
                       const teacherLoads: Record<string, number> = {};
                       for (const turmaId in schedules) {
+                        // Ignorar espelhos de salas especiais para o cálculo de carga horária do professor
+                        const turmaObj = turmas.find(t => t.id === turmaId);
+                        if (turmaObj && turmaObj.isRoom) continue;
+                        
                         const turmaSched = schedules[turmaId];
                         if (!turmaSched) continue;
                         for (const slotId in turmaSched) {

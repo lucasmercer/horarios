@@ -26,7 +26,8 @@ import {
   Trash2,
   AlertCircle,
   Check,
-  Database
+  Database,
+  Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -167,11 +168,20 @@ export default function DashboardLayout() {
   };
 
   const handleExportBackup = () => {
+    const certKeys = Object.keys(localStorage).filter(k => k.startsWith('preset_template_'));
+    const certificatePresets: Record<string, any> = {};
+    certKeys.forEach(k => {
+      certificatePresets[k] = JSON.parse(localStorage.getItem(k) || 'null');
+    });
+
     const data = {
       teachers: JSON.parse(localStorage.getItem('cecm_teachers') || '[]'),
       subjects: JSON.parse(localStorage.getItem('cecm_subjects') || '[]'),
       turmas: JSON.parse(localStorage.getItem('cecm_turmas') || '[]'),
       schedules: JSON.parse(localStorage.getItem('cecm_schedules') || '{}'),
+      substitutions: JSON.parse(localStorage.getItem('cecm_substitutions') || '[]'),
+      notices: JSON.parse(localStorage.getItem('cecm_notices') || '[]'),
+      certificatePresets: certificatePresets,
       version: parseInt(localStorage.getItem('cecm_version') || '74', 10),
       logoUrl: localStorage.getItem('cecm_logo_url') || '',
       schoolName: localStorage.getItem('cecm_school_name') || 'CE LUCAS LENIAR EF.M.P.',
@@ -243,6 +253,14 @@ export default function DashboardLayout() {
     if (data.subjects) localStorage.setItem('cecm_subjects', JSON.stringify(data.subjects));
     if (data.turmas) localStorage.setItem('cecm_turmas', JSON.stringify(data.turmas));
     localStorage.setItem('cecm_schedules', JSON.stringify(data.schedules || {}));
+    if (data.substitutions) localStorage.setItem('cecm_substitutions', JSON.stringify(data.substitutions));
+    if (data.notices) localStorage.setItem('cecm_notices', JSON.stringify(data.notices));
+    
+    if (data.certificatePresets) {
+      Object.keys(data.certificatePresets).forEach(k => {
+        localStorage.setItem(k, JSON.stringify(data.certificatePresets[k]));
+      });
+    }
     
     if (data.logoUrl !== undefined) localStorage.setItem('cecm_logo_url', data.logoUrl);
     if (data.schoolName !== undefined) {
@@ -350,6 +368,7 @@ export default function DashboardLayout() {
     { name: 'Horários', path: '/horarios', icon: CalendarDays, locked: !hasTurmas || !hasDisciplinas || !hasProfessores },
     { name: 'Substituições', path: '/substituicoes', icon: CalendarClock, locked: !hasTurmas || !hasDisciplinas || !hasProfessores },
     { name: 'Atas de Reunião', path: '/atas', icon: FileText, locked: false },
+    { name: 'Certificados', path: '/certificados', icon: Award, locked: false },
     { name: 'Banco de Dados', path: '/dados', icon: Database, locked: false }
   ];
 
@@ -1210,7 +1229,8 @@ export default function DashboardLayout() {
                     { id: 'professores', label: '3. Professores', icon: Users },
                     { id: 'alunos', label: '4. Turmas', icon: GraduationCap },
                     { id: 'disciplinas', label: '5. Disciplinas', icon: BookOpen },
-                    { id: 'atas', label: '6. Atas de Reunião', icon: FileText }
+                    { id: 'atas', label: '6. Atas de Reunião', icon: FileText },
+                    { id: 'certificados', label: '7. Certificados', icon: Award }
                   ].map(tab => {
                     const TabIcon = tab.icon;
                     const isActive = manualActiveTab === tab.id;

@@ -3,6 +3,16 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+import { polyfill } from "mobile-drag-drop";
+import "mobile-drag-drop/default.css";
+
+// Polyfill para suportar drag and drop nativo no Android e iOS
+polyfill({
+  dragImageCenterOnTouch: true
+});
+
+window.addEventListener('touchmove', function() {}, {passive: false});
+
 window.onerror = function(message, source, lineno, colno, error) {
   const root = document.getElementById('root');
   if (root) {

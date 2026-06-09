@@ -10,6 +10,7 @@ import ScheduleGenerator from './components/ScheduleGenerator';
 import DashboardLayout from './layouts/DashboardLayout';
 import DashboardCentral from './components/DashboardCentral';
 import Atas from './components/Atas';
+import Certificados from './components/Certificados';
 import Substitutions from './components/Substitutions';
 import DataManager from './components/DataManager';
 
@@ -184,6 +185,7 @@ export default function App() {
           <Route path="disciplinas" element={<div className="h-full w-full flex flex-col max-w-7xl mx-auto"><ScheduleGenerator /></div>} />
           <Route path="substituicoes" element={<Substitutions />} />
           <Route path="atas" element={<Atas />} />
+          <Route path="certificados" element={<div className="h-full w-full flex flex-col"><Certificados /></div>} />
           <Route path="dados" element={<DataManager />} />
         </Route>
       </Routes>
