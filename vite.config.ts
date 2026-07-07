@@ -8,7 +8,7 @@ export default defineConfig(({mode}) => {
   const GEMINI_API_KEY = env.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
   
   return {
-    base: '/horarios/',
+    base: '/',
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(GEMINI_API_KEY),
